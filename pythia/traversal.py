@@ -16,6 +16,8 @@ import copy
 import os
 
 class Origin:
+    """ Holds a list of extensions/inclusions of a certain template """
+
     def __init__(self, template_path):
         self.path = [template_path]
 
@@ -31,6 +33,8 @@ class Origin:
         return " -> ".join(self.path)
 
 class Context(OrderedDict):
+    """ A wrapper class for collections.OrderedDict """
+
     def __str__(self):
         """ Prints all the context values in a readable format
 
@@ -44,14 +48,18 @@ class Context(OrderedDict):
         return " / ".join(formatted_values)
 
 class Traverser:
-    def __init__(self, filters):
+    """ Provides the core functionality for traversing the template's AST """
+    def __init__(self, disable_warnings, filters):
+        # TODO: Based on warnings, construct a logger instead.
         self.dangerous_filters = filters
         self.ctx = Context()
+        self.disable_warnings = disable_warnings
         self.results = []
         self.django_version = StrictVersion(django.get_version())
 
     def traverseNode(self, origin, node, ctx):
-        # This is necessary, pointersssssssss
+        # NOTE: Deep copy is need because dictionaries are
+        # passed by reference.
         ctx = copy.deepcopy(ctx)
 
         cls = node.__class__
@@ -78,9 +86,8 @@ class Traverser:
 
         elif cls == AutoEscapeControlNode:
             # If {% autoescape off %} occurs
-            if node.setting:
-                print("Autoescape is turned '{}' within: {}"
-                        .format(switch, origin))
+            if not node.setting:
+                print("Autoescape is turned OFF within: {}\n".format(origin))
 
         elif cls == BlockNode or cls == IfNode:
             # Check from context if block node were overriden.
@@ -90,9 +97,10 @@ class Traverser:
         elif cls == IncludeNode:
             # TODO: Handle relative paths aswell
             if node.template.var.__class__ == Variable:
-                print("[{}]: Custom filter was used to find the included " \
-                      "template's name, investigate: {}\n" \
-                      .format(origin, node.template.token))
+                if not self.disable_warnings:
+                    print("[{}]: Custom filter was used to find the included " \
+                        "template's name, investigate: {}\n" \
+                        .format(origin, node.template.token))
                 return
             inclusion_path = node.template.var
             # Handle exceptions
@@ -110,20 +118,28 @@ class Traverser:
                 print("[*] variable paths are not supported, ignoring extension")
                 sys.exit()
                 return
+            # Extensions were introduced in Django 1.10.0
             if ".." in extension_path and self.django_version < StrictVersion("1.10.0"):
                 print("[*] relative paths are not supported for django < 1.10.0")
                 return
 
             # Handle exceptions
             tpl = get_template(extension_path).template
-            origin = copy.deepcopy(origin)
-            origin.append(extension_path)
+
+
+            # NOTE: Deep copying is needed, because dictionaries are passed
+            # by reference.
+            extension_origin = copy.deepcopy(origin)
+            extension_origin.append(extension_path)
+
             # Follow the extending base template
-            for pnode in tpl:
-                self.traverseNode(origin, pnode, ctx)
+            for parent_node in tpl:
+                self.traverseNode(extension_origin, parent_node, ctx)
+
             # Then traverse the origin template
-            for snode in node.nodelist:
-                self.traverseNode(origin, snode, ctx)
+            for sub_node in node.nodelist:
+                self.traverseNode(origin, sub_node, ctx)
+
         elif cls == WithNode:
             # TODO: This is odd, research
             key, val = node.extra_context.popitem()
@@ -134,13 +150,14 @@ class Traverser:
             ctx[key] = val
             for snode in node.nodelist:
                 self.traverseNode(origin, snode, ctx)
+
         elif cls == ForNode:
-            # NOTE: Used for cases like {% for key, val in dict %}
-            # One entry for the key and one for the value
+            # In the case of {% key, val in dict %}
+            # loopvars would be ['key', 'val']
             for var in node.loopvars:
                 ctx[var] = node.sequence.token
-            for snode in node.nodelist_loop:
-                self.traverseNode(origin, snode, ctx)
+            for sub_node in node.nodelist_loop:
+                self.traverseNode(origin, sub_node, ctx)
 
     def traverseTemplate(self, tpl_path, tpl):
         origin = Origin(tpl_path)

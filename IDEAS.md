@@ -9,8 +9,9 @@
 
 2. Build our own environment with only `pythia` as a dependency
 
-* Lock our own Django version, and work on that
 * Mock tags and filters with a change to break things already(This is too much work)
 * Move all templates to a custom directory since we dont have access to TEMPLATE_DIRS
 * Minimal work required from user
 * Custom tags cannot be properly parsed.
+
+- Parse extending templates just once (keep a table of which templates need to be parsed)
