@@ -5,9 +5,14 @@ from django.conf import settings
 import os
 import sys
 import argparse
-from distutils.version import StrictVersion
 
-from traversal import Traverser
+from traversal import TemplateTraverser, ViewTraverser
+
+# Backwards compatibility requires this
+if django.VERSION >= (1, 9, 0):
+    from django.template.exceptions import TemplateSyntaxError
+else:
+    from django.template.base import TemplateSyntaxError
 
 def main():
     args = parse_arguments()
@@ -16,15 +21,12 @@ def main():
         print("[*] Error: 'DJANGO_SETTINGS_MODULE' environment variable should"
                 "be set and point to your settings module, e.g. 'myproj.settings'")
         sys.exit(1)
-    sys.path.append(os.getcwd()) # This is needed in order to run pythia from anywhere
-    django.setup()
-    version = StrictVersion(django.get_version())
+    if 'PYTHONPATH' not in os.environ or os.getcwd() not in os.environ['PYTHONPATH']:
+        print("[*] Error: append your current working directory to your 'PYTHONPATH',"
+                " run `export PYTHONPATH=$PYTHONPATH:${PWD}` under the same directory as your manage.py resides")
+        sys.exit(1)
 
-    # Backwards compatibility requires this
-    if version >= StrictVersion('1.9.0'):
-        from django.template.exceptions import TemplateSyntaxError
-    else:
-        from django.template.base import TemplateSyntaxError
+    django.setup()
 
     # Find all templates in the project
     # TODO: Optimize this with glob ( if we are going to use python > 3.6 )
@@ -35,15 +37,13 @@ def main():
                 original_path = os.path.join(root, filename)
                 templates.append(original_path)
 
-    tr = Traverser(args.disable_warnings, args.dangerous_filters)
+    tr = TemplateTraverser(args.disable_warnings, args.dangerous_filters)
 
     for template_path in templates:
         with open(template_path) as f:
             stripped_path = template_path.split("/templates/")[1]
-            # This allows relative imports in templates while being backwards compatible
-            # TODO: Handle exceptions for TemplateSyntaxError
             try:
-                if version < StrictVersion("1.10.0"):
+                if django.VERSION < (1, 10, 0):
                     tpl = Template(f.read())
                 else:
                     tpl = Template(f.read(), origin=Origin("starting_point", template_name=stripped_path))

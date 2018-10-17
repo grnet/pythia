@@ -3,14 +3,13 @@ from django.template.base import VariableNode
 from django.template.loader import get_template
 from django.template.loader_tags import (
     TextNode, BlockNode, 
-    IncludeNode, ExtendsNode, Template, Variable
+    IncludeNode, ExtendsNode, Variable
 )
 from django.template.defaulttags import (
     CommentNode, CsrfTokenNode,
     AutoEscapeControlNode, IfNode, WithNode, ForNode
 )
 
-from distutils.version import StrictVersion
 from collections import OrderedDict
 import copy
 import os
@@ -47,7 +46,7 @@ class Context(OrderedDict):
         ]
         return " / ".join(formatted_values)
 
-class Traverser:
+class TemplateTraverser:
     """ Provides the core functionality for traversing the template's AST """
     def __init__(self, disable_warnings, filters):
         # TODO: Based on warnings, construct a logger instead.
@@ -55,7 +54,6 @@ class Traverser:
         self.ctx = Context()
         self.disable_warnings = disable_warnings
         self.results = []
-        self.django_version = StrictVersion(django.get_version())
 
     def traverseNode(self, origin, node, ctx):
         # NOTE: Deep copy is need because dictionaries are
@@ -119,7 +117,7 @@ class Traverser:
                 sys.exit()
                 return
             # Extensions were introduced in Django 1.10.0
-            if ".." in extension_path and self.django_version < StrictVersion("1.10.0"):
+            if ".." in extension_path and django.VERSION < (1, 10, 0):
                 print("[*] relative paths are not supported for django < 1.10.0")
                 return
 
@@ -190,3 +188,10 @@ class Traverser:
                 }
         nx.draw_circular(G, **options)
         plt.savefig('nx_test.png')
+
+class ViewTraverser:
+    def __init__(self):
+        return
+    def traverse(self, views):
+        for v in views:
+            print(v['module'])
