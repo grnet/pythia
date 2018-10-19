@@ -38,8 +38,7 @@ else:
         return p.regex.pattern
 
 class UrlResolver:
-    def __init__(self):
-        return
+    # TODO: Make this a proper manage.py command??
     def resolve(self, format_json=False):
         # TODO: add more than one settings module
         settings_modules = [settings]
@@ -52,29 +51,25 @@ class UrlResolver:
         except Exception as e:
             import traceback
             traceback.print_exc()
-            raise Exception("Error occurred while trying to load %s: %s" % (getattr(settings, urlconf), str(e)))
+            raise Exception("Error occurred while trying to load {0}: {1}".format(getattr(settings, urlconf), str(e)))
 
         view_functions = self.extract_views_from_urlpatterns(urlconf.urlpatterns)
         for (func, regex, url_name) in view_functions:
-            decorators = []
-
-            # TODO: Fill decorators.
             if ("decorators" in func.__module__):
                 func = self.find_view_function(func)
 
             if hasattr(func, '__name__'):
                 func_name = func.__name__
             elif hasattr(func, '__class__'):
-                func_name = '%s()' % func.__class__.__name__
+                func_name = func.__class__.__name__
             else:
                 func_name = re.sub(r' at 0x[0-9a-f]+', '', repr(func))
 
             module = '{0}.{1}'.format(func.__module__, func_name)
             url_name = url_name or ''
             url = simplify_regex(regex)
-            decorator = ', '.join(decorators)
 
-            views.append({"url": url, "module": module, "name": url_name, "decorators": decorator})
+            views.append({"url": url, "module": module, "name": url_name})
 
         if format_json:
             return json.dumps(views, indent=4)

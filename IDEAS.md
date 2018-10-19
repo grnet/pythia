@@ -16,3 +16,4 @@
 
 - Parse extending templates just once (keep a table of which templates need to be parsed)
 - Maybe make this a manage.py command instead? Will solve various issues
+- Follow `ast` package's model with visit_(__class__.__name__)
