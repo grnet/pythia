@@ -38,9 +38,7 @@ else:
         return p.regex.pattern
 
 class UrlResolver:
-    # TODO: Make this a proper manage.py command??
     def resolve(self, format_json=False):
-        # TODO: add more than one settings module
         settings_modules = [settings]
         urlconf = "ROOT_URLCONF"
         views = []
@@ -134,7 +132,7 @@ class UrlResolver:
             cell = closure.cell_contents
             if isinstance(cell, types.FunctionType) and cell.func_name == '<lambda>': 
                 continue
-            elif  isinstance(cell, (str, types.NoneType)):
+            elif isinstance(cell, (str, types.NoneType)):
                 continue
             elif isinstance(cell, functools.partial):
                 return self.find_view_function(cell.args[0])

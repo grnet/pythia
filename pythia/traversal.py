@@ -16,127 +16,140 @@ import os
 import ast
 
 class TemplateTraverser:
-    """ Provides the core functionality for traversing a django template's AST """
+    """ 
+    Provides the core functionality for traversing a django template's AST 
+
+    This class follows python's ast package's pattern:
+
+    For all nodes, `visit` is going to be called.
+    `visit` acts as the router function for all template tags.
+
+    For example, for a `CommentNode`, `visit_CommentNode` will be called.
+    If that function does not exist, then `generic_visit` will be called.
+
+    `generic_visit` acts as the default handler for all unhandled template tags
+    """
     def __init__(self, disable_warnings, filters):
         # TODO: Based on disable_warnings, set a logger's level instead
         self.dangerous_filters = filters
-        self.ctx = Context()
         self.disable_warnings = disable_warnings
-        self.results = []
+        self.results = {}
 
-    def traverse_template(self, tpl_path, tpl):
+    def walk(self, tpl_path, tpl):
         origin = Origin(tpl_path)
         for node in tpl:
-            self._traverse_node(origin, node, self.ctx)
+            self.visit(origin, node, Context())
 
-    def _traverse_node(self, origin, node, ctx):
-        # NOTE: Deep copy is need because dictionaries are
-        # passed by reference.
+    def visit(self, origin, node, ctx):
+        method = 'visit_' + node.__class__.__name__
+        visitor = getattr(self, method, self.generic_visit)
+        # NOTE: Deep copy is need because dictionaries are passed by reference.
         ctx = copy.deepcopy(ctx)
+        return visitor(origin, node, ctx)
 
-        cls = node.__class__
+    def generic_visit(self, origin, node, ctx):
+        """ Ignore all other tags for now """
+        return
 
-        ignored_node_types = [CommentNode, CsrfTokenNode, TextNode]
-        # TODO: Maybe csrftokenNode holds all children nodes and so
-        # it shouldn't be ignored
-        if cls in ignored_node_types:
+    def visit_IncludeNode(self, origin, node, ctx):
+        inclusion_path = node.template.var
+
+        if inclusion_path.__class__ == Variable:
+            if not self.disable_warnings:
+                print("[*] variable paths are not supported, ignoring extension")
             return
 
-        elif cls == VariableNode:
-            tokens = node.filter_expression.token.split("|")
-            var_name, filters = tokens[0], tokens[1:]
+        if inclusion_path.startswith((".", "..")) and django.VERSION < (1, 10, 0):
+            print("[*] relative paths are not supported for django < 1.10.0")
+            return
 
-            # This is needed for cases like {{ vuln|  safe }}
-            filters = [f.strip(" ") for f in filters]
+        # TODO: Handle exceptions
+        tpl = get_template(inclusion_path).template
+        origin = copy.deepcopy(origin)
+        origin.append(inclusion_path)
+        for sub_node in tpl:
+            self.visit(origin, sub_node, ctx)
 
-            for f in filters:
-                if f in self.dangerous_filters:
-                    # print("[{}]: The '{}' filter was used for '{}' " \
-                    #         "with context: '{}'\n" \
-                    #         .format(origin, f, var_name, ctx))
-                    origin = copy.deepcopy(origin)
-                    self.results.append((origin, f, var_name, ctx))
-                    return
+    def visit_ExtendsNode(self, origin, node, ctx):
+        extension_path = node.parent_name.var
 
-        elif cls == AutoEscapeControlNode:
-            # If {% autoescape off %} occurs
-            if not node.setting:
-                return
-            # print("Autoescape is turned OFF within: {}\n".format(origin))
+        if extension_path.__class__ == Variable:
+            print("[*] variable paths are not supported, ignoring extension")
+            return
 
-        elif cls == BlockNode or cls == IfNode:
-            # Check from context if block node were overriden.
-            for snode in node.nodelist:
-                self._traverse_node(origin, snode, ctx)
+        if extension_path.startswith((".", "..")) and django.VERSION < (1, 10, 0):
+            print("[*] relative paths are not supported for django < 1.10.0")
+            return
 
-        elif cls == IncludeNode:
-            # TODO: Handle relative paths aswell
-            if node.template.var.__class__ == Variable:
-                if not self.disable_warnings:
-                    return
-                    # print("[{}]: Custom filter was used to find the included " \
-                    #     "template's name, investigate: {}\n" \
-                    #     .format(origin, node.template.token))
-            inclusion_path = node.template.var
+        # TODO: Handle exceptions
+        tpl = get_template(extension_path).template
 
-            if inclusion_path.startswith((".", "..")) and django.VERSION < (1, 10, 0):
-                print("[*] relative paths are not supported for django < 1.10.0")
-                return
+        extension_origin = copy.deepcopy(origin)
+        extension_origin.append(extension_path)
 
-            # Handle exceptions
-            tpl = get_template(inclusion_path).template
-            origin = copy.deepcopy(origin)
-            origin.append(inclusion_path)
-            for snode in tpl:
-                self._traverse_node(origin, snode, ctx)
+        # TODO: Check if another template has already traversed the
+        # template we are about to extend
+        for extending_tpl_node in tpl:
+            self.visit(extension_origin, extending_tpl_node, ctx)
 
-        elif cls == ExtendsNode:
-            extension_path = node.parent_name.var
+        for sub_node in node.nodelist:
+            self.visit(origin, sub_node, ctx)
 
-            # {% extends var_path %} is not supported
-            if extension_path.__class__ == Variable:
-                print("[*] variable paths are not supported, ignoring extension")
-                sys.exit()
-                return
+    def visit_ForNode(self, origin, node, ctx):
+        # In the case of {% key, val in dict %}
+        # loopvars would be ['key', 'val']
+        for var in node.loopvars:
+            ctx[var] = node.sequence.token
+        for sub_node in node.nodelist_loop:
+            self.visit(origin, sub_node, ctx)
 
-            if extension_path.startswith(("..", ".")) and django.VERSION < (1, 10, 0):
-                print("[*] relative paths are not supported for django < 1.10.0")
-                return
+    def visit_VariableNode(self, origin, node, ctx):
+        tokens = node.filter_expression.token.split("|")
+        var_name, filters = tokens[0], tokens[1:]
 
-            # Handle exceptions
-            tpl = get_template(extension_path).template
+        # This is needed for cases like {{ vuln|  safe }}
+        filters = [f.strip(" ") for f in filters]
 
-            extension_origin = copy.deepcopy(origin)
-            extension_origin.append(extension_path)
+        for f in filters:
+            if f in self.dangerous_filters:
+                # print("[{}]: The '{}' filter was used for '{}' " \
+                #         "with context: '{}'\n" \
+                #         .format(origin, f, var_name, ctx))
+                origin = copy.deepcopy(origin)
+                self.results[origin.path[0]] = (origin, f, var_name, ctx)
 
-            # Follow the extending base template
-            # TODO: Check if another template has already traversed the
-            # template we are about to extend
-            for parent_node in tpl:
-                self._traverse_node(extension_origin, parent_node, ctx)
+    def visit_WithNode(self, origin, node, ctx):
+        key, val = node.extra_context.popitem()
+        if val.__class__ == Variable:
+            val = val.var.var
+        else:
+            val = val.var
+        ctx[key] = val
+        for sub_node in node.nodelist:
+            self.visit(origin, sub_node, ctx)
 
-            # Then traverse the origin template
-            for sub_node in node.nodelist:
-                self._traverse_node(origin, sub_node, ctx)
+    def visit_IfNode(self, origin, node, ctx):
+        for sub_node in node.nodelist:
+            self.visit(origin, sub_node, ctx)
 
-        elif cls == WithNode:
-            # TODO: This is odd, research
-            key, val = node.extra_context.popitem()
-            if val.__class__ == Variable:
-                val = val.var.var
-            else:
-                val = val.var
-            ctx[key] = val
-            for snode in node.nodelist:
-                self._traverse_node(origin, snode, ctx)
+    def visit_BlockNode(self, origin, node, ctx):
+        for sub_node in node.nodelist:
+            self.visit(origin, sub_node, ctx)
 
-        elif cls == ForNode:
-            # In the case of {% key, val in dict %}
-            # loopvars would be ['key', 'val']
-            for var in node.loopvars:
-                ctx[var] = node.sequence.token
-            for sub_node in node.nodelist_loop:
-                self._traverse_node(origin, sub_node, ctx)
+    def visit_TextNode(self, origin, node, ctx):
+        return
+
+    def visit_CsrfTokenNode(self, origin, node, ctx):
+        # TODO: Maybe csrftokenNode holds all children nodes and so
+        # it shouldn't be ignored
+        return
+
+
+    def visit_AutoEscapeControlNode(self, origin, node, ctx):
+        # When {% autoescape off %} occurs
+        if not node.setting:
+            return
+        # print("Autoescape is turned OFF within: {}\n".format(origin))
 
 
 class NodeVisitor(ast.NodeVisitor):
@@ -144,17 +157,19 @@ class NodeVisitor(ast.NodeVisitor):
     Collects all templates used in a module's views
 
     After running NodeVisitor.visit() on an ast, `templates` will hold 
-    a list of tuple with the following:
+    a dict with the following:
 
-    [(view, template, lineno), ...], where lineno is where the template's context is defined
+    {"template_name": (module_path, view, lineno), ...}, where lineno is where the template's context is defined
 
-    `assignments` holds all assignments for the current function's scope
-    `current_func` is the current function we are traversing
+    `assignments` holds all assignments inside the current function's scope
+
+    `current_func` is the current function we are currently traversing
     """
-    def __init__(self):
-        self.templates = []
+    def __init__(self, module_path):
+        self.templates = {}
         self.current_func = None
         self.assignments = {}
+        self.module_path = module_path
         super(NodeVisitor, self).__init__()
 
     def visit_Call(self, node):
@@ -166,13 +181,10 @@ class NodeVisitor(ast.NodeVisitor):
         if function_called == 'render':
             # In case the caller didn't provide any context
             if len(node.args) == 0 or isinstance(node.args[0], ast.Call):
-                """
-                This is the following
-                t = get_template("test.html")
-                t.render(RequestContext(request))
-                TODO: Check if it is an attribute call 
-                """
-                self.templates.append((self.current_func.name, "unknown", node.lineno))
+                # Example: t = get_template("test.html")
+                # t.render(RequestContext(request))
+                # TODO: Check if it is an attribute call
+                return
             else:
                 if len(node.args) == 2:
                     lineno = node.lineno
@@ -180,12 +192,12 @@ class NodeVisitor(ast.NodeVisitor):
                     lineno = node.args[2].lineno
                 else:
                     lineno = self.assignments[node.args[2].id].lineno
-                self.templates.append((self.current_func.name, node.args[1].s, lineno))
+                self.templates[node.args[1].s] = (self.module_path, self.current_func.name, lineno)
         self.generic_visit(node)
 
     def visit_Assign(self,node):
         """ 
-        Holds a per-function cache for all assignments 
+        Holds a per-function cache for all assignments
 
         This helps in the case of:
         return_dict = {"users": User.objects.all()}
