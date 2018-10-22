@@ -6,7 +6,9 @@ import os
 import sys
 import argparse
 import ast
+import logging
 
+from logger import init_logging
 from traversal import TemplateTraverser, NodeVisitor
 
 if django.VERSION >= (1, 9, 0):
@@ -14,8 +16,11 @@ if django.VERSION >= (1, 9, 0):
 else:
     from django.template.base import TemplateSyntaxError
 
+log = logging.getLogger('pythia')
+
 def main():
     args = parse_arguments()
+    init_logging(args.debug, args.enable_warnings)
 
     check_environment()
     # NOTE: This is needed because if PYTHONENV is not set, this will raise an exception
@@ -29,7 +34,7 @@ def main():
                 original_path = os.path.join(root, filename)
                 templates.append(original_path)
 
-    tt = TemplateTraverser(args.disable_warnings, args.dangerous_filters)
+    tt = TemplateTraverser(args.dangerous_filters)
 
     for template_path in templates:
         with open(template_path) as f:
@@ -40,7 +45,7 @@ def main():
                 else:
                     tpl = Template(f.read(), origin=Origin("starting_point", template_name=stripped_path))
             except TemplateSyntaxError as err:
-                print('[*] Error: could not parse template "{}":\n{}\n'.format(template_path, err))
+                log.warn('Could not parse template ({}): "{}"'.format(template_path, err))
                 continue
             tt.walk(stripped_path, tpl)
 
@@ -74,31 +79,32 @@ def main():
                 nv.visit(tree)
                 view_templates.update(nv.templates)
         except IOError:
-            print("Warning: module '{}' does not exist. "
-                  "Likely a module provided by an external package" \
+            log.warn("Module '{}' does not exist. "
+                     "Likely a module provided by an external package" \
                     .format(v['module']))
 
     for tpl, (origin, filter, var_name, ctx) in tt.results.items():
         if tpl in view_templates:
             (module_path, view, lineno) = view_templates[tpl]
-            print("{0}:{1}:{2} -> {3} used '{4}' on '{5}' with context '{6}'" \
+            log.info("{0}:{1}:{2} -> {3} used '{4}' on '{5}' with context '{6}'" \
                     .format(module_path, view, lineno, origin, filter, var_name, ctx))
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--dangerous-filters', nargs="+", default=["safe", "safeseq"])
-    parser.add_argument('-w', '--disable-warnings', action="store_true")
+    parser.add_argument('-w', '--enable-warnings', action="store_true")
+    parser.add_argument('-d', '--debug', action="store_true")
     args = parser.parse_args()
     return args
 
 def check_environment():
     if 'DJANGO_SETTINGS_MODULE' not in os.environ:
-        print("[*] Error: 'DJANGO_SETTINGS_MODULE' environment variable should"
+        log.critical("'DJANGO_SETTINGS_MODULE' environment variable should"
                 "be set and point to your settings module, e.g. 'myproj.settings'")
         sys.exit(1)
     if 'PYTHONPATH' not in os.environ or os.getcwd() not in os.environ['PYTHONPATH']:
-        print("[*] Error: append your current working directory to your 'PYTHONPATH',"
+        log.critical("Append your current working directory to your 'PYTHONPATH',"
                 " run `export PYTHONPATH=$PYTHONPATH:${PWD}`"
                 " under the same directory as your manage.py resides")
         sys.exit(1)

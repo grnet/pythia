@@ -10,10 +10,18 @@ from django.template.defaulttags import (
     AutoEscapeControlNode, IfNode, WithNode, ForNode
 )
 
+if django.VERSION >= (1, 9, 0):
+    from django.template.exceptions import TemplateDoesNotExist
+else:
+    from django.template.base import TemplateDoesNotExist
+
 from collections import OrderedDict
 import copy
 import os
 import ast
+import logging
+
+log = logging.getLogger('pythia')
 
 class TemplateTraverser:
     """ 
@@ -29,10 +37,8 @@ class TemplateTraverser:
 
     `generic_visit` acts as the default handler for all unhandled template tags
     """
-    def __init__(self, disable_warnings, filters):
-        # TODO: Based on disable_warnings, set a logger's level instead
+    def __init__(self, filters):
         self.dangerous_filters = filters
-        self.disable_warnings = disable_warnings
         self.results = {}
 
     def walk(self, tpl_path, tpl):
@@ -55,16 +61,19 @@ class TemplateTraverser:
         inclusion_path = node.template.var
 
         if inclusion_path.__class__ == Variable:
-            if not self.disable_warnings:
-                print("[*] variable paths are not supported, ignoring extension")
+            log.warn("Variable paths are not supported, ignoring inclusion")
             return
 
         if inclusion_path.startswith((".", "..")) and django.VERSION < (1, 10, 0):
-            print("[*] relative paths are not supported for django < 1.10.0")
+            log.warn("Relative paths are not supported for django < 1.10.0")
             return
 
-        # TODO: Handle exceptions
-        tpl = get_template(inclusion_path).template
+        try:
+            tpl = get_template(inclusion_path).template
+        except TemplateDoesNotExist:
+            log.warn("Attempted to include '%s' and it does not exist" % extension_path)
+            return
+
         origin = copy.deepcopy(origin)
         origin.append(inclusion_path)
         for sub_node in tpl:
@@ -74,15 +83,18 @@ class TemplateTraverser:
         extension_path = node.parent_name.var
 
         if extension_path.__class__ == Variable:
-            print("[*] variable paths are not supported, ignoring extension")
+            log.warn("variable paths are not supported, ignoring extension")
             return
 
         if extension_path.startswith((".", "..")) and django.VERSION < (1, 10, 0):
-            print("[*] relative paths are not supported for django < 1.10.0")
+            log.warn("relative paths are not supported for django < 1.10.0")
             return
 
-        # TODO: Handle exceptions
-        tpl = get_template(extension_path).template
+        try:
+            tpl = get_template(extension_path).template
+        except TemplateDoesNotExist:
+            log.warn("Attempted to extend '%s' and it does not exist" % extension_path)
+            return
 
         extension_origin = copy.deepcopy(origin)
         extension_origin.append(extension_path)
@@ -110,11 +122,15 @@ class TemplateTraverser:
         # This is needed for cases like {{ vuln|  safe }}
         filters = [f.strip(" ") for f in filters]
 
+        if ctx.autoescape:
+            self.results[origin.path[0]] = (origin, 'autoescape', var_name, ctx)
+            return
+
         for f in filters:
             if f in self.dangerous_filters:
-                # print("[{}]: The '{}' filter was used for '{}' " \
-                #         "with context: '{}'\n" \
-                #         .format(origin, f, var_name, ctx))
+                log.debug("[{}]: The '{}' filter was used for '{}' " \
+                        "with context: '{}'" \
+                        .format(origin, f, var_name, ctx))
                 origin = copy.deepcopy(origin)
                 self.results[origin.path[0]] = (origin, f, var_name, ctx)
 
@@ -140,16 +156,17 @@ class TemplateTraverser:
         return
 
     def visit_CsrfTokenNode(self, origin, node, ctx):
-        # TODO: Maybe csrftokenNode holds all children nodes and so
-        # it shouldn't be ignored
         return
 
 
     def visit_AutoEscapeControlNode(self, origin, node, ctx):
         # When {% autoescape off %} occurs
+        # All output will be considered potentially vulnerable.
         if not node.setting:
-            return
-        # print("Autoescape is turned OFF within: {}\n".format(origin))
+            log.debug("Autoescape is turned OFF within: {}".format(origin))
+            ctx.autoescape = True
+        for sub_node in node.nodelist:
+            self.visit(origin, sub_node, ctx)
 
 
 class NodeVisitor(ast.NodeVisitor):
@@ -243,6 +260,10 @@ class Origin:
 
 class Context(OrderedDict):
     """ A wrapper class for collections.OrderedDict """
+
+    def __init__(self, *args, **kwargs):
+        super(Context, self).__init__(*args, **kwargs)
+        self.autoescape = False
 
     def __str__(self):
         """ Prints all the context values in a readable format
