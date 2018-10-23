@@ -1,31 +1,56 @@
-import django
-from django.template.base import VariableNode
-from django.template.loader import get_template
-from django.template.loader_tags import (
-    TextNode, BlockNode, 
-    IncludeNode, ExtendsNode, Variable
-)
-from django.template.defaulttags import (
-    CommentNode, CsrfTokenNode,
-    AutoEscapeControlNode, IfNode, WithNode, ForNode
-)
-
-if django.VERSION >= (1, 9, 0):
-    from django.template.exceptions import TemplateDoesNotExist
-else:
-    from django.template.base import TemplateDoesNotExist
-
-from collections import OrderedDict
 import copy
-import os
 import ast
 import logging
+from collections import OrderedDict
+
+from django.template.loader import get_template
+from django.template.loader_tags import Variable
+from django.template.base import Template, Origin
+
+import django
+if django.VERSION >= (1, 9, 0):
+    from django.template.exceptions import TemplateDoesNotExist
+    from django.template.exceptions import TemplateSyntaxError
+else:
+    from django.template.base import TemplateSyntaxError
+    from django.template.base import TemplateDoesNotExist
 
 log = logging.getLogger('pythia')
 
+
+class ProjectTraverser:
+    """
+    A utility class that takes a list of template paths,
+    traverses them by using TemplateTraverser, and returns
+    all potentially vulnerable variable outputs.
+    """
+
+    def __init__(self, templates, dangerous_filters):
+        self.templates = templates
+        self.dangerous_filters = dangerous_filters
+
+    def walk(self):
+        for template_path in self.templates:
+            tt = TemplateTraverser(self.dangerous_filters)
+            with open(template_path) as f:
+                stripped_path = template_path.split("/templates/")[1]
+                try:
+                    if django.VERSION < (1, 10, 0):
+                        tpl = Template(f.read())
+                    else:
+                        tpl = Template(f.read(), origin=Origin(
+                            "starting_point", template_name=stripped_path))
+                except TemplateSyntaxError as err:
+                    log.warn('Could not parse template ({}): "{}"'
+                             .format(template_path, err))
+                    continue
+                tt.walk(stripped_path, tpl)
+        return tt.final_results
+
+
 class TemplateTraverser:
-    """ 
-    Provides the core functionality for traversing a django template's AST 
+    """
+    Provides the core functionality for traversing a django template's AST
 
     This class follows python's ast package's pattern:
 
@@ -36,15 +61,23 @@ class TemplateTraverser:
     If that function does not exist, then `generic_visit` will be called.
 
     `generic_visit` acts as the default handler for all unhandled template tags
+
+    `final_results` holds a global dictionary of the following:
+    {'base.html': [(origin, filter, variable_name, context), ...], ...}
+    Essentially, for each template we store all the potentially
+    vulnerable variable output
     """
+    final_results = {}
+
     def __init__(self, filters):
         self.dangerous_filters = filters
-        self.results = {}
+        self.temp_results = []
 
     def walk(self, tpl_path, tpl):
-        origin = Origin(tpl_path)
+        origin = [tpl_path]
         for node in tpl:
             self.visit(origin, node, Context())
+        self.final_results[tpl_path] = self.temp_results
 
     def visit(self, origin, node, ctx):
         method = 'visit_' + node.__class__.__name__
@@ -60,7 +93,7 @@ class TemplateTraverser:
     def visit_IncludeNode(self, origin, node, ctx):
         inclusion_path = node.template.var
 
-        if inclusion_path.__class__ == Variable:
+        if isinstance(inclusion_path, Variable):
             log.warn("Variable paths are not supported, ignoring inclusion")
             return
 
@@ -71,13 +104,21 @@ class TemplateTraverser:
         try:
             tpl = get_template(inclusion_path).template
         except TemplateDoesNotExist:
-            log.warn("Attempted to include '%s' and it does not exist" % extension_path)
+            log.warn("Attempted to include '%s' and it does not exist" % inclusion_path)
             return
 
-        origin = copy.deepcopy(origin)
-        origin.append(inclusion_path)
-        for sub_node in tpl:
-            self.visit(origin, sub_node, ctx)
+        if inclusion_path in self.final_results:
+            included_tpl_results = self.final_results[inclusion_path]
+        else:
+            tt = TemplateTraverser(self.dangerous_filters)
+            tt.walk(inclusion_path, tpl)
+            included_tpl_results = tt.temp_results
+
+        # Prepend the current origin to all results from the included template
+        # E.g. ['404.html, intermidiate.html'] + ['base.html', 'footer.html']
+        for res in included_tpl_results:
+            vuln = (origin + res[0], res[1], res[2], res[3])
+            self.temp_results.append(vuln)
 
     def visit_ExtendsNode(self, origin, node, ctx):
         extension_path = node.parent_name.var
@@ -96,13 +137,17 @@ class TemplateTraverser:
             log.warn("Attempted to extend '%s' and it does not exist" % extension_path)
             return
 
-        extension_origin = copy.deepcopy(origin)
-        extension_origin.append(extension_path)
+        if extension_path in self.final_results:
+            extending_tpl_results = self.final_results[extension_path]
+        else:
+            tt = TemplateTraverser(self.dangerous_filters)
+            tt.walk(extension_path, tpl)
+            extending_tpl_results = tt.temp_results
 
-        # TODO: Check if another template has already traversed the
-        # template we are about to extend
-        for extending_tpl_node in tpl:
-            self.visit(extension_origin, extending_tpl_node, ctx)
+        # Same as for inclusions
+        for res in extending_tpl_results:
+            vuln = (origin + res[0], res[1], res[2], res[3])
+            self.temp_results.append(vuln)
 
         for sub_node in node.nodelist:
             self.visit(origin, sub_node, ctx)
@@ -123,16 +168,16 @@ class TemplateTraverser:
         filters = [f.strip(" ") for f in filters]
 
         if ctx.autoescape:
-            self.results[origin.path[0]] = (origin, 'autoescape', var_name, ctx)
+            self.temp_results.append((origin, 'autoescape', var_name, ctx))
             return
 
         for f in filters:
             if f in self.dangerous_filters:
-                log.debug("[{}]: The '{}' filter was used for '{}' " \
-                        "with context: '{}'" \
-                        .format(origin, f, var_name, ctx))
+                log.debug("[{}]: The '{}' filter was used for '{}' "
+                          "with context: '{}'"
+                          .format(origin, f, var_name, ctx))
                 origin = copy.deepcopy(origin)
-                self.results[origin.path[0]] = (origin, f, var_name, ctx)
+                self.temp_results.append((origin, f, var_name, ctx))
 
     def visit_WithNode(self, origin, node, ctx):
         key, val = node.extra_context.popitem()
@@ -158,7 +203,6 @@ class TemplateTraverser:
     def visit_CsrfTokenNode(self, origin, node, ctx):
         return
 
-
     def visit_AutoEscapeControlNode(self, origin, node, ctx):
         # When {% autoescape off %} occurs
         # All output will be considered potentially vulnerable.
@@ -173,10 +217,11 @@ class NodeVisitor(ast.NodeVisitor):
     """
     Collects all templates used in a module's views
 
-    After running NodeVisitor.visit() on an ast, `templates` will hold 
+    After running NodeVisitor.visit() on an ast, `templates` will hold
     a dict with the following:
 
-    {"template_name": (module_path, view, lineno), ...}, where lineno is where the template's context is defined
+    {"template_name": (module_path, view, lineno), ...}, where lineno
+    is where the template's context is defined
 
     `assignments` holds all assignments inside the current function's scope
 
@@ -209,11 +254,12 @@ class NodeVisitor(ast.NodeVisitor):
                     lineno = node.args[2].lineno
                 else:
                     lineno = self.assignments[node.args[2].id].lineno
-                self.templates[node.args[1].s] = (self.module_path, self.current_func.name, lineno)
+                self.templates[node.args[1].s] = \
+                    (self.module_path, self.current_func.name, lineno)
         self.generic_visit(node)
 
-    def visit_Assign(self,node):
-        """ 
+    def visit_Assign(self, node):
+        """
         Holds a per-function cache for all assignments
 
         This helps in the case of:
@@ -221,6 +267,7 @@ class NodeVisitor(ast.NodeVisitor):
         ...
         return render(request, "users.html", return_dict)
         """
+        # TODO: Handle global vars also
         for target in node.targets:
             # TODO: Handle subscript also
             if isinstance(target, ast.Attribute):
@@ -241,22 +288,6 @@ class NodeVisitor(ast.NodeVisitor):
         self.assignments = {}
         self.generic_visit(node)
 
-class Origin:
-    """ Holds a list of extensions/inclusions of a certain template """
-
-    def __init__(self, template_path):
-        self.path = [template_path]
-
-    def append(self, template_path):
-        self.path.append(template_path)
-
-    def __str__(self):
-        """ Prints the origin path for both inclusions and extensions.
-
-        For example,
-        'admin/login.html -> admin/base.html'
-        """
-        return " -> ".join(self.path)
 
 class Context(OrderedDict):
     """ A wrapper class for collections.OrderedDict """
@@ -272,7 +303,7 @@ class Context(OrderedDict):
         'var1->alias1 / var2->alias2'
         """
         formatted_values = [
-            '{0}->{1}' \
-            .format(key, value) for (key, value) in reversed(self.items())
+            '{0}->{1}'.format(key, value)
+            for (key, value) in reversed(self.items())
         ]
         return " / ".join(formatted_values)

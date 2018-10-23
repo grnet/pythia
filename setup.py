@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="django-pythia",
-    version="0.2.2",
+    version="0.2.3",
     description="Pythia scans your django project for potentially tainted flows of data",
     author="Linos Giannopoulos",
     author_email="linosgian00@gmail.com",
