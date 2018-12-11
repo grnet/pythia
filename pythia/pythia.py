@@ -33,6 +33,7 @@ def main():
     view_templates = parse_view_modules(views)
     find_tainted_paths(view_templates, vuln_templates)
 
+
 def find_all_templates():
     templates = []
     for root, dirnames, filenames in os.walk("."):
@@ -50,6 +51,7 @@ def find_tainted_paths(view_templates, vuln_templates):
                 module_path, view, lineno = view_templates[tpl]
                 log.info("{0}:{1}:{2} -> {3} used '{4}' on '{5}' with context '{6}'"
                          .format(module_path, view, lineno, origin, filter, var_name, ctx))
+
 
 def parse_view_modules(views):
     """
@@ -89,6 +91,7 @@ def parse_view_modules(views):
 
     return view_templates
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--dangerous-filters',
@@ -114,6 +117,7 @@ def setup_environment():
     # Django adds its own loggers and they catch all logging levels
     for handler in logging.root.handlers:
         logging.root.removeHandler(handler)
+
 
 if __name__ == "__main__":
     main()

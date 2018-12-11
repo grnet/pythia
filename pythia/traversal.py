@@ -30,6 +30,10 @@ class ProjectTraverser:
         self.dangerous_filters = dangerous_filters
 
     def walk(self):
+        """
+        Iterates all templates and returns all potentially vulnerable
+        variable outputs
+        """
         for template_path in self.templates:
             tt = TemplateTraverser(self.dangerous_filters)
             with open(template_path) as f:
@@ -66,6 +70,7 @@ class TemplateTraverser:
     {'base.html': [(origin, filter, variable_name, context), ...], ...}
     Essentially, for each template we store all the potentially
     vulnerable variable output
+
     """
     final_results = {}
 
@@ -82,8 +87,6 @@ class TemplateTraverser:
     def visit(self, origin, node, ctx):
         method = 'visit_' + node.__class__.__name__
         visitor = getattr(self, method, self.generic_visit)
-        # NOTE: Deep copy is need because dictionaries are passed by reference.
-        ctx = copy.deepcopy(ctx)
         return visitor(origin, node, ctx)
 
     def generic_visit(self, origin, node, ctx):
@@ -91,6 +94,10 @@ class TemplateTraverser:
         return
 
     def visit_IncludeNode(self, origin, node, ctx):
+        """
+        Uses the global cache `final_results`
+        to avoid double traversing of a template
+        """
         inclusion_path = node.template.var
 
         if isinstance(inclusion_path, Variable):
@@ -155,12 +162,17 @@ class TemplateTraverser:
     def visit_ForNode(self, origin, node, ctx):
         # In the case of {% key, val in dict %}
         # loopvars would be ['key', 'val']
+        ctx = copy.deepcopy(ctx)
         for var in node.loopvars:
             ctx[var] = node.sequence.token
         for sub_node in node.nodelist_loop:
             self.visit(origin, sub_node, ctx)
 
     def visit_VariableNode(self, origin, node, ctx):
+        """
+        Checks whether a `dangerous filter` is used on a variable or
+        if the autoescape is turned off during output rendering
+        """
         tokens = node.filter_expression.token.split("|")
         var_name, filters = tokens[0], tokens[1:]
 
@@ -176,10 +188,11 @@ class TemplateTraverser:
                 log.debug("[{}]: The '{}' filter was used for '{}' "
                           "with context: '{}'"
                           .format(origin, f, var_name, ctx))
-                origin = copy.deepcopy(origin)
                 self.temp_results.append((origin, f, var_name, ctx))
 
     def visit_WithNode(self, origin, node, ctx):
+        """ Provides `context` for all subsequent nodes """
+        ctx = copy.deepcopy(ctx)
         key, val = node.extra_context.popitem()
         if val.__class__ == Variable:
             val = val.var.var
@@ -204,11 +217,13 @@ class TemplateTraverser:
         return
 
     def visit_AutoEscapeControlNode(self, origin, node, ctx):
-        # When {% autoescape off %} occurs
-        # All output will be considered potentially vulnerable.
+        """ If autoescape is turned off then pass that to the context """
+
+        ctx = copy.deepcopy(ctx)
         if not node.setting:
             log.debug("Autoescape is turned OFF within: {}".format(origin))
             ctx.autoescape = True
+
         for sub_node in node.nodelist:
             self.visit(origin, sub_node, ctx)
 
