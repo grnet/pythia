@@ -82,7 +82,8 @@ class TemplateTraverser:
         origin = [tpl_path]
         for node in tpl:
             self.visit(origin, node, Context())
-        self.final_results[tpl_path] = self.temp_results
+        if len(self.temp_results) > 0:
+            self.final_results[tpl_path] = self.temp_results
 
     def visit(self, origin, node, ctx):
         method = 'visit_' + node.__class__.__name__
@@ -242,9 +243,11 @@ class NodeVisitor(ast.NodeVisitor):
 
     `current_func` is the current function we are currently traversing
     """
-    def __init__(self, module_path):
+    def __init__(self, module_path, dangerous_decorators):
         self.templates = {}
         self.current_func = None
+        self.dangerous_views = {}
+        self.dangerous_decorators = dangerous_decorators
         self.assignments = {}
         self.module_path = module_path
         super(NodeVisitor, self).__init__()
@@ -263,14 +266,43 @@ class NodeVisitor(ast.NodeVisitor):
                 # TODO: Check if it is an attribute call
                 return
             else:
+                # TODO: Check {}.format() case for str substitution
                 if len(node.args) == 2:
                     lineno = node.lineno
-                elif isinstance(node.args[2], ast.Dict):
+                elif len(node.args) < 2:
+                    for keyword in node.keywords:
+                        if keyword.arg == 'template':
+                            node.args.append(keyword.value)
+                    lineno = node.lineno
+                elif isinstance(node.args[2], ast.Dict): # render(request, {...})
                     lineno = node.args[2].lineno
-                else:
+                else:                                    # render(request, var), lookup var assignment
                     lineno = self.assignments[node.args[2].id].lineno
-                self.templates[node.args[1].s] = \
-                    (self.module_path, self.current_func.name, lineno)
+
+                key = None
+                if isinstance(node.args[1], ast.Name):
+                    assignment = self.assignments[node.args[1].id]
+                    if isinstance(assignment, ast.BinOp): # template_name = "admin/%s" % tpl_name
+                        if not assignment.right.id in self.assignments:
+                            return
+                        key = assignment.left.s % self.assignments[assignment.right.id].s
+                    elif isinstance(assignment, ast.Call) and assignment.func.attr == 'format': # template_name = "admin/{}".format(tpl_name)
+                        args = []
+                        for arg in assignment.args:
+                            if isinstance(arg, ast.Name):
+                                args.append(self.assignments[arg.id].s)
+                            elif isinstance(arg, ast.Str):
+                                args.append(arg.s)
+                            else:
+                                return
+                        key = assignment.func.value.s.format(*args)
+                elif isinstance(node.args[1], (ast.Attribute, ast.Dict)): # render(req, self.template_name) in a Class-based view
+                    return
+                else:
+                    key = node.args[1].s
+
+                self.templates.setdefault(key, []) \
+                .append((self.module_path, self.current_func.name, lineno))
         self.generic_visit(node)
 
     def visit_Assign(self, node):
@@ -299,6 +331,11 @@ class NodeVisitor(ast.NodeVisitor):
         Cleans up after previous function's assignments.
         Also hooks the current node as the current_func.
         """
+        # Flattens all of the function's decorators
+        current_func_decorators = [d.id for d in node.decorator_list if isinstance(d, ast.Name)]
+        for d in self.dangerous_decorators:
+            if d in current_func_decorators:
+                self.dangerous_views.setdefault(node.name, []).append(d)
         self.current_func = node
         self.assignments = {}
         self.generic_visit(node)
@@ -319,6 +356,6 @@ class Context(OrderedDict):
         """
         formatted_values = [
             '{0}->{1}'.format(key, value)
-            for (key, value) in reversed(self.items())
+            for (key, value) in reversed(list(self.items()))
         ]
         return " / ".join(formatted_values)

@@ -1,6 +1,7 @@
 import functools
 import json
 import types
+import inspect
 import re
 
 from django.contrib.admindocs.views import simplify_regex
@@ -52,6 +53,7 @@ def resolve_urls(format_json=False):
         raise Exception("Error occurred while trying to load {0}: {1}"
                         .format(urlconf, str(e)))
 
+    find_view_function = get_view_resolver()
     view_functions = extract_views_from_urlpatterns(urlconf.urlpatterns)
     for (func, regex, url_name) in view_functions:
         if ("decorators" in func.__module__):
@@ -67,8 +69,9 @@ def resolve_urls(format_json=False):
         module = '{0}.{1}'.format(func.__module__, func_name)
         url_name = url_name or ''
         url = simplify_regex(regex)
+        view_name = module.split(".")[-1]
 
-        views.append({"url": url, "module": module, "name": url_name})
+        views.append({"view_name": view_name, "url": url, "module": module, "name": url_name})
 
     if format_json:
         return json.dumps(views, indent=4)
@@ -126,17 +129,24 @@ def extract_views_from_urlpatterns(urlpatterns, base='', namespace=None):
             raise TypeError("%s does not appear to be a urlpattern object" % p)
     return views
 
+def get_view_resolver():
+    def find_view_function_p2(func):
+        """ Resolves nested decorators and returns the original view function """
+        if func.func_closure is None:
+            return func
+        for closure in func.func_closure:
+            cell = closure.cell_contents
+            if isinstance(cell, types.FunctionType) and cell.func_name == '<lambda>':
+                continue
+            elif isinstance(cell, (str, types.NoneType)):
+                continue
+            elif isinstance(cell, functools.partial):
+                return find_view_function_p2(cell.args[0])
+            return find_view_function_p2(cell)
 
-def find_view_function(func):
-    """ Resolves nested decorators and returns the original view function """
-    if func.func_closure is None:
-        return func
-    for closure in func.func_closure:
-        cell = closure.cell_contents
-        if isinstance(cell, types.FunctionType) and cell.func_name == '<lambda>':
-            continue
-        elif isinstance(cell, (str, types.NoneType)):
-            continue
-        elif isinstance(cell, functools.partial):
-            return find_view_function(cell.args[0])
-        return find_view_function(cell)
+    def find_view_function_p3(func):
+        partial_func = inspect.unwrap(func)
+        return partial_func.args[0] if isinstance(partial_func, functools.partial) else partial_func
+
+    import sys
+    return find_view_function_p3 if sys.version_info[0] == 3 else find_view_function_p2
