@@ -1,6 +1,3 @@
-import logging
-import sys
-
 class Style:
     RED = '\033[31m'
     YELLOW = '\033[33m'
@@ -21,43 +18,34 @@ LOG_COLORS = {
 }
 
 
-class ColoredFormatter(logging.Formatter):
+class Logger:
+    cached_loggers = {}
 
-    def __init__(self, msg):
-        logging.Formatter.__init__(self, fmt=msg)
+    @classmethod
+    def get_logger(cls, logger_name):
+        if logger_name in cls.cached_loggers:
+            return cls.cached_loggers[logger_name]
+        return cls(logger_name)
 
-    def format(self, record):
-        record.reset = Style.ESCAPE
-        record.color = LOG_COLORS[record.levelname]
-        return logging.Formatter.format(self, record)
+    def __init__(self, logger_name):
+        self.cached_loggers[logger_name] = self
+        self.enable_warnings=False
+        self.enable_debug=False
 
+    def init_logger(self, enable_debug=False, enable_warnings=False):
+        self.enable_warnings = enable_warnings
+        self.enable_debug = enable_debug
 
-def init_logging(debug, enable_warnings, name='pythia'):
+    def info(self, args):
+        print('{0}[*] {1}{2}'.format(Style.WHITE, args, Style.ESCAPE))
 
-    class LogFilter(logging.Filter):
-        def filter(self, record):
-            """ Log up to INFO to stdout """
-            return record.levelno <= logging.INFO
+    def error(self, args):
+        print('{0}[*] {1}{2}'.format(Style.RED, args, Style.ESCAPE))
 
-    log = logging.getLogger(name)
-    level = logging.DEBUG if debug else logging.INFO
-    log.setLevel(level)
+    def warn(self, args):
+        if self.enable_warnings:
+            print('{0}[*] {1}{2}'.format(Style.YELLOW, args, Style.ESCAPE))
 
-    colored_formatter = ColoredFormatter(
-        '%(color)s[*] %(message)s %(reset)s')
-
-    handler_stdout = logging.StreamHandler(sys.stdout)
-    handler_stdout.setFormatter(colored_formatter)
-    handler_stdout.setLevel(logging.DEBUG)
-    handler_stdout.addFilter(LogFilter())
-
-
-    level = logging.WARNING if enable_warnings else logging.ERROR
-    handler_stderr = logging.StreamHandler(sys.stderr)
-    handler_stderr.setFormatter(colored_formatter)
-    handler_stderr.setLevel(level)
-
-    log.addHandler(handler_stderr)
-    log.addHandler(handler_stdout)
-
-    return log
+    def debug(self, args):
+        if self.enable_debug:
+            print('{0}[*] {1}{2}'.format(Style.BLUE, args, Style.ESCAPE))
