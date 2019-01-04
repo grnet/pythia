@@ -6,15 +6,14 @@ import logging
 import django
 
 
-from .logger import init_logging
+from .logger import Logger
 from .traversal import NodeVisitor, ProjectTraverser
 
-log = logging.getLogger('pythia')
-
+log = Logger.get_logger('pythia')
 
 def main():
     args = parse_arguments()
-    init_logging(args.debug, args.enable_warnings)
+    log.init_logger(args.debug, args.enable_warnings)
 
     setup_environment()
     from .urlresolver import resolve_urls
@@ -30,8 +29,9 @@ def main():
     # Resolve all urls -> views
     views = resolve_urls()
 
-    dangerous_views, view_templates = parse_view_modules(views, args.dangerous_decorators)
+    dangerous_views, dangerous_contexts, view_templates = parse_view_modules(views, args.dangerous_decorators)
     pprint_dangerous_views(dangerous_views, views)
+    pprint_dangerous_contexts(dangerous_contexts, views)
     find_tainted_paths(view_templates, vuln_templates, args.ignore_variables)
     pprint_unresolved(vuln_templates, args.ignore_variables)
 
@@ -42,12 +42,25 @@ def pprint_dangerous_views(dangerous_views, views):
                 log.info("Under '{0}' view '{1}' runs the following unsafe decorators: '{2}'"
                         .format(view['url'], view['module'], decorators))
 
+def pprint_dangerous_contexts(dangerous_contexts, views):
+    for dangerous_view, ctx in dangerous_contexts.items():
+        for view in views: #TODO: change this to a dict with the view name as the key
+            if view['view_name'] == dangerous_view.name:
+                for (var_name, dangerous_func, lineno) in ctx:
+                    log.info("Under '{0}' view '{1}:{4}' runs: '{3}' on '{2}'"
+                            .format(view['url'], view['module'], var_name, dangerous_func, lineno))
+
 def pprint_unresolved(vuln_templates, ignore_variables):
     for tpl in vuln_templates.keys():
         for (origin, filter, var_name, ctx) in vuln_templates[tpl]:
             if var_name not in ignore_variables:
-                log.info("Could not resolve {0}: {1} ran '{2}' on '{3}' with context '{4}'"
-                        .format(tpl, origin, filter, var_name, ctx))
+                if ctx:
+                    log.info("Could not resolve {0}: {1} ran '{2}' on '{3}' with context '{4}'"
+                            .format(tpl, origin, filter, var_name, ctx))
+                else:
+                    log.info("Could not resolve {0}: {1} ran '{2}' on '{3}'"
+                            .format(tpl, origin, filter, var_name))
+
 
 def find_all_templates():
     templates = []
@@ -78,11 +91,12 @@ def parse_view_modules(views, dangerous_decorators):
     visited = set()
     view_templates = {}
     dangerous_views = {}
+    dangerous_contexts = {}
     for v in views:
         # Cut off view's name, e.g. ganeti.views.get_users -> ganeti/views/
         module_path = "/".join(v['module'].split(".")[:-1])
 
-        if "django" in module_path or module_path in visited:
+        if "django" in module_path:
             continue
 
         # NOTE: maybe we can just import module instead of opening the file?
@@ -94,21 +108,24 @@ def parse_view_modules(views, dangerous_decorators):
             relative_path = module_path + ".py"
 
         absolute_path = os.path.join(os.getcwd(), relative_path)
+        if absolute_path in visited:
+            continue
         try:
             with open(absolute_path) as mod_file:
-                visited.add(relative_path)
+                visited.add(absolute_path)
                 nv = NodeVisitor(relative_path, dangerous_decorators)
                 code = mod_file.read()
                 tree = ast.parse(code)
                 nv.visit(tree)
                 dangerous_views.update(nv.dangerous_views)
                 view_templates.update(nv.templates)
+                dangerous_contexts.update(nv.dangerous_contexts)
         except IOError:
             log.warn("Module '{}' does not exist. "
                      "Likely a module provided by an external package"
                      .format(v['module']))
 
-    return (dangerous_views, view_templates)
+    return (dangerous_views, dangerous_contexts, view_templates)
 
 
 def parse_arguments():

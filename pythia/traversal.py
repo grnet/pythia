@@ -1,7 +1,7 @@
 import copy
 import ast
-import logging
 from collections import OrderedDict
+from .logger import Logger
 
 from django.template.loader import get_template
 from django.template.loader_tags import Variable
@@ -15,8 +15,7 @@ else:
     from django.template.base import TemplateSyntaxError
     from django.template.base import TemplateDoesNotExist
 
-log = logging.getLogger('pythia')
-
+log = Logger.get_logger('pythia')
 
 class ProjectTraverser:
     """
@@ -193,13 +192,16 @@ class TemplateTraverser:
 
     def visit_WithNode(self, origin, node, ctx):
         """ Provides `context` for all subsequent nodes """
-        ctx = copy.deepcopy(ctx)
-        key, val = node.extra_context.popitem()
-        if val.__class__ == Variable:
-            val = val.var.var
-        else:
-            val = val.var
-        ctx[key] = val
+
+        # static data e.g. {% with var="sample" %}
+        if node.extra_context:
+            ctx = copy.deepcopy(ctx)
+            key, val = node.extra_context.popitem()
+            if val.__class__ == Variable:
+                val = val.var.var
+            else:
+                val = val.var
+            ctx[key] = val
         for sub_node in node.nodelist:
             self.visit(origin, sub_node, ctx)
 
@@ -248,15 +250,19 @@ class NodeVisitor(ast.NodeVisitor):
         self.current_func = None
         self.dangerous_views = {}
         self.dangerous_decorators = dangerous_decorators
+        self.dangerous_contexts = {}
         self.assignments = {}
+        self.subscript_assignments = {}
         self.module_path = module_path
         super(NodeVisitor, self).__init__()
 
     def visit_Call(self, node):
         if isinstance(node.func, ast.Attribute):
             function_called = node.func.attr
-        else:
+        elif isinstance(node.func, ast.Name):
             function_called = node.func.id
+        else: # could be ast.Call e.g. get_function()()
+            return
 
         if function_called == 'render':
             # In case the caller didn't provide any context
@@ -277,7 +283,10 @@ class NodeVisitor(ast.NodeVisitor):
                 elif isinstance(node.args[2], ast.Dict): # render(request, {...})
                     lineno = node.args[2].lineno
                 else:                                    # render(request, var), lookup var assignment
-                    lineno = self.assignments[node.args[2].id].lineno
+                    context_name = node.args[2].id
+                    lineno = self.assignments[context_name].lineno
+                    if context_name in self.subscript_assignments:
+                        self.dangerous_contexts[self.current_func] = self.subscript_assignments[context_name]
 
                 key = None
                 if isinstance(node.args[1], ast.Name):
@@ -317,13 +326,40 @@ class NodeVisitor(ast.NodeVisitor):
         # TODO: Handle global vars also
         for target in node.targets:
             # TODO: Handle subscript also
+            # TODO: Abstract attribute calls.
             if isinstance(target, ast.Attribute):
                 var_name = target.attr
+                self.assignments[var_name] = node.value
             elif isinstance(target, ast.Name):
                 var_name = target.id
-            else:
-                continue
-            self.assignments[var_name] = node.value
+                self.assignments[var_name] = node.value
+            elif isinstance(target, ast.Tuple): # multiple returns e.g. a, b = get_params()
+                for return_arg in target.elts:
+                    if isinstance(return_arg, ast.Attribute):
+                        var_name = return_arg.attr
+                    else:
+                        var_name = return_arg.id
+                    self.assignments[var_name] = node.value
+            elif isinstance(target, ast.Subscript):
+                #TODO: refactor this, handle all cases.
+                # Case: d[var] = a[var2] instead of function call
+                if isinstance(node.value, (ast.Subscript, ast.Str, ast.Name, ast.Compare)):
+                    break
+                # TODO: Fix case: d[var] = mark_safe(..)
+                if isinstance(target.slice.value, ast.Name):
+                    key = target.slice.value.id
+                elif isinstance(target.slice.value, ast.Str):
+                    key = target.slice.value.s
+                else:
+                    break
+                if not hasattr(node.value, "func") or isinstance(node.value.func, ast.Attribute):
+                    break
+                func_called = node.value.func.id
+                # TODO: Expand this for a user-supplied function
+                if func_called == 'mark_safe':
+                    assignment = (key, func_called, node.lineno)
+                    self.subscript_assignments.setdefault(target.value.id, []).append(assignment)
+
         self.generic_visit(node)
 
     def visit_FunctionDef(self, node):
