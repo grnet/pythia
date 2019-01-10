@@ -144,11 +144,11 @@ def parse_arguments():
 
 def setup_environment():
     if 'DJANGO_SETTINGS_MODULE' not in os.environ:
-        log.critical("'DJANGO_SETTINGS_MODULE' environment variable should"
+        log.error("'DJANGO_SETTINGS_MODULE' environment variable should"
                      "be set and point to your settings module, e.g. 'myproj.settings'")
         sys.exit(1)
     if 'PYTHONPATH' not in os.environ or os.getcwd() not in os.environ['PYTHONPATH']:
-        log.critical("Append your current working directory to your 'PYTHONPATH', "
+        log.error("Append your current working directory to your 'PYTHONPATH', "
                      "run `export PYTHONPATH=$PYTHONPATH:${PWD}` "
                      "under the same directory as your manage.py resides")
         sys.exit(1)
