@@ -10,7 +10,7 @@ For more information about the motivation and the tool's design decisions, check
 1. Ability to parse django templates in order to find XSS vulnerabilities
 2. Also tracks data from views to the templates
 3. Resolves URLs to views so that we have actionable information when conducting security assessments
-4. Finds `Cross Site Request Forgery` issues
+4. Finds _Cross Site Request Forgery_ issues
 
 ## Install
 ```

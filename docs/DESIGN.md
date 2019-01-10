@@ -1,6 +1,6 @@
 ### Motivation
 
-Pythia is made after conducting several penetration tests for Django applications. 
+Pythia was made after conducting several penetration tests for Django applications. 
 During that time some of this work's tasks ended up being tedious and repetitive
 such as `grep-ing` for several keywords (e.g. mark_safe, csrf_exempt)
 in order to find certain issues.
