@@ -131,11 +131,14 @@ def parse_view_modules(views, dangerous_decorators):
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--ignore-variables',
-                        nargs="+", default=[])
+                        nargs="+", default=[],
+                        help='ignore variables that appear in the output and the data source is safe')
     parser.add_argument('-f', '--dangerous-filters',
-                        nargs="+", default=["safe", "safeseq"])
+                        nargs="+", default=["safe", "safeseq"],
+                        help='Django filters to look for. Defaults to ["safe", "safeseq"]')
     parser.add_argument('-dd', '--dangerous-decorators',
-                        nargs="+", default=["csrf_exempt"])
+                        nargs="+", default=["csrf_exempt"],
+                        help='view decorators to look for. Defaults to ["csrf_exempt"]')
     parser.add_argument('-w', '--enable-warnings', action="store_true")
     parser.add_argument('-d', '--debug', action="store_true")
     args = parser.parse_args()

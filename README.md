@@ -19,9 +19,10 @@ pip install django-pythia
 
 ## How to Use
 
-1. Setup your application's environment so that you are able to run `python manage.py runserver`  
+1. Setup your application's environment so that you are able to run `python manage.py runserver`
 2. Install `pythia` as shown above
-3. export `DJANGO_SETTINGS_MODULE` equal to your django's settings, e.g. `myproject.settings`
+3. export `DJANGO_SETTINGS_MODULE` to your django's settings,
+e.g. `export DJANGO_SETTINGS_MODULE=myproject.settings`
 4. Under your project's root, run `"export PYTHONPATH=$PYTHONPATH:${PWD}"`
 5. Run `pythia`
 
@@ -33,12 +34,17 @@ usage: pythia [-h] [-i IGNORE_VARIABLES [IGNORE_VARIABLES ...]]
 
 optional arguments:
   -h, --help            show this help message and exit
-  -i IGNORE_VARIABLES [IGNORE_VARIABLES ...], 
-  	--ignore-variables IGNORE_VARIABLES [IGNORE_VARIABLES ...]
-  -f DANGEROUS_FILTERS [DANGEROUS_FILTERS ...], 
-  	--dangerous-filters DANGEROUS_FILTERS [DANGEROUS_FILTERS ...]
-  -dd DANGEROUS_DECORATORS [DANGEROUS_DECORATORS ...], 
-  	--dangerous-decorators DANGEROUS_DECORATORS [DANGEROUS_DECORATORS ...]
+  -i IGNORE_VARIABLES [IGNORE_VARIABLES ...], --ignore-variables IGNORE_VARIABLES [IGNORE_VARIABLES ...]
+                        ignore variables that appear in the output and the
+                        data source is safe
+  -f DANGEROUS_FILTERS [DANGEROUS_FILTERS ...], --dangerous-filters DANGEROUS_FILTERS [DANGEROUS_FILTERS ...]
+                        Django filters to look for. Defaults to ["safe",
+                        "safeseq"]
+  -dd DANGEROUS_DECORATORS [DANGEROUS_DECORATORS ...], --dangerous-decorators DANGEROUS_DECORATORS [DANGEROUS_DECORATORS ...]
+                        view decorators to look for. Defaults to
+                        ["csrf_exempt"]
   -w, --enable-warnings
   -d, --debug
 ```
+By default `Pythia` looks for occurences of `safe/safeseq` filters, `@csrf_exempt` occurences
+and `mark_safe` invocations in view functions.
