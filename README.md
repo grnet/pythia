@@ -6,7 +6,8 @@ vulnerabilities such as Cross-site Scripting (XSS) and Cross-site Request Forger
 
 Design and implementation details can be found in the corresponding
 [paper](https://github.com/grnet/pythia/blob/master/docs/pythia.pdf)
-which will appear the Proceedings of the 12th Workshop on Systems Security (EuroSec '19).
+which will appear the Proceedings of the
+[12th Workshop on Systems Security (EuroSec '19)](https://www.threat-arrest.eu/html/eurosec-2019/).
 
 For more information about the motivation and the tool's design decisions, 
 follow this [link](docs/DESIGN.md)
