@@ -1,14 +1,15 @@
 # Pythia: Identifying Dangerous Data-flows in Django-based Applications
 
-Pythia is a static analysis tool developed by GRNET.
+Pythia is a static analysis tool developed by [GRNET](https://grnet.gr/).
 It analyzes Django-based applications to identify well-known application 
 vulnerabilities such as Cross-site Scripting (XSS) and Cross-site Request Forgery (CSRF).
 
-Design and implementation details can be found in the corresponding paper found
-in the Proceedings of the 12th Workshop on Systems Security (EuroSec '19).
+Design and implementation details can be found in the corresponding
+[paper](https://github.com/grnet/pythia/blob/master/docs/pythia.pdf)
+which will appear the Proceedings of the 12th Workshop on Systems Security (EuroSec '19).
 
 For more information about the motivation and the tool's design decisions, 
-look here [this](docs/DESIGN.md)
+follow this [link](docs/DESIGN.md)
 
 ## Features
 1. Ability to parse django templates in order to find XSS vulnerabilities
