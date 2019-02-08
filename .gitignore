@@ -1,4 +1,5 @@
 **/*.pyc
 **/*.pdf
+!docs/pythia.pdf
 *.egg-info/*
 /dist/
