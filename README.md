@@ -23,7 +23,7 @@ follow this [link](docs/DESIGN.md)
 pip install django-pythia
 ```
 
-## How to Use
+## Set up
 
 1. Setup your application's environment so that you are able to run `python manage.py runserver`
 2. Install `pythia` as shown above
