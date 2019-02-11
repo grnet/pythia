@@ -1,0 +1,86 @@
+% MVC elements here, maybe?
+\section{Background}
+\label{sec:background}
+
+The Model View Controller 
+({\sc mvc}) architectural
+pattern~\cite{GLH03, BD04}
+is one of the most widespread design
+patterns used for developing user interfaces. Specifically,
+it divides an application into three
+basic parts that are interconnected.
+The {\it model} is the application's
+data structure which is independent
+of the user interface and it directly
+manages the data of the application.
+A {\it view} can be any output
+representation of information and finally,
+the {\it controller}
+accepts input and converts it into
+commands for the model or view.
+Currently,
+there are thousands of web applications
+that are implemented based on the {\sc mvc}
+pattern.
+
+Our research focuses on applications
+that follow an adaptation of the
+{\sc mvc},
+namely the Model Template
+View ({\sc mtv}) pattern.
+In the {\sc mtv} context
+there is an object-relational mapper
+({\sc orm}) that mediates between data models
+and a relational database (model).
+There is also a system for
+processing {\sc http} requests with
+a web templating system (view),
+and a regular-expression-based
+{\sc url} dispatcher.
+Templates are parts of the
+client-side code and are employed by views.
+
+Django is a Python-based Web framework
+that follows the {\sc mtv} pattern
+and allows developers to build
+large applications in an easy way.
+
+Even though {\sc mvc} facilitates
+structured code,
+it introduces a complexity that
+may lead to inconsistencies~\cite{OPM15}.
+In addition,
+its multiple features and tangly
+structure makes it hard to manually
+identify vulnerabilities such as
+{\sc xss} or {\sc csrf}.
+ 
+In particular it is difficult to trace tainted data within the 
+application, because in addition to the standard components of 
+the architecture, other elements (i.e. templates), which follow 
+inheritance relations, are in place. 
+At the same time, an automated tool can relatively easy track 
+data  flows due to the formalization of coding structure that 
+web frameworks have brought. 
+
+\paragraph{MVC in Django}
+Django ~\cite{django} is a Python based web framework, that is 
+widely used by the community since it offers many features
+for easy and quick development and because of the  
+increasing growth of Python ~\cite{python_trend}.
+It follows a Model Template View ({\sc mtv}) or ({\sc mvt}) 
+architectural pattern ~\cite{Holovaty:2009:DGD:1572516}, 
+\cite{django_mvt}, which is slightly different than the 
+standard {\sc mvc}. 
+
+Django's {\tt Template}, is a part of the client-side 
+and relates to the {\tt View} in {\sc mvc} as it controls what is 
+displayed to the user. The {\tt Model}, has the same role in the 
+{\sc mvc} and {\sc mvc} and is part of the server-side.  
+Correspondingly Django framework incorporates the {\tt View} and the 
+application logic, which relates to the standard {\tt Controller}, 
+since it is responsible for the communication between the 
+{\tt Template} and the {\tt Model}. 
+
+
+

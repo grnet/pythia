@@ -1,0 +1,165 @@
+\documentclass[sigconf]{acmart}
+
+\usepackage{booktabs} % For formal tables
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{algorithm}
+\usepackage{multirow}
+%\usepackage{draftwatermark}
+\usepackage[noend]{algpseudocode}
+%\SetWatermarkText{Preprint}
+
+\algnewcommand\And{\textbf{and}}
+\lstset{
+  language=Python,
+  showstringspaces=false,
+  formfeed=newpage,
+  tabsize=4,
+  commentstyle=itshape,
+  frame=tb,
+  morekeywords={models, lambda, forms}
+}
+\lstset{
+  numbers=left,
+  firstnumber=1,
+  numberfirstline=true
+}
+
+\setcopyright{rightsretained}
+
+\copyrightyear{2019} 
+\acmYear{2019} 
+\setcopyright{acmlicensed}
+\acmConference[EuroSec '19]{12th European Workshop on Systems Security}{March 25--28, 2019}{Dresden, Germany}
+\acmBooktitle{12th European Workshop on Systems Security (EuroSec '19), March 25--28, 2019, Dresden, Germany}
+\acmPrice{15.00}
+\acmDOI{10.1145/3301417.3312497}
+\acmISBN{978-1-4503-6274-0/19/03}
+
+\usepackage{comment}
+\algrenewcommand\algorithmicprocedure{\textbf{function}}
+
+\begin{document}
+\title{Pythia: Identifying Dangerous Data-flows in Django-based Applications}
+
+\author{Linos Giannopoulos}
+\affiliation{%
+  \institution{Greek Research and Technology Network}
+}
+\email{lgian@noc.grnet.gr}
+
+\author{Eirini Degkleri}
+\affiliation{%
+  \institution{Greek Research and Technology Network}
+}
+\email{degleri@noc.grnet.gr}
+
+\author{Panayiotis Tsanakas}
+\affiliation{
+  \institution{National Technical
+  University of Athens}
+}
+\email{panag@cs.ntua.gr}
+
+\author{Dimitris Mitropoulos}
+\affiliation{%
+  \institution{Greek Research and Technology Network}
+}
+\email{dimitro@grnet.gr}
+
+\renewcommand{\shortauthors}{L. Giannopoulos et al.}
+
+\begin{abstract}
+Web frameworks that allow developers
+to create applications based on design
+patterns such as the
+{\it Model View Controller} ({\sc mvc}),
+provide by default a number of security checks.
+Nevertheless,
+by using specific constructs,
+developers may disable these checks
+thus re-introducing classic application
+vulnerabilities such as Cross-site Scripting
+({\sc xss}) and Cross-Site Request Forgery
+({\sc csrf}).
+Framework-specific elements including
+(1) the complex nature of these applications,
+(2) the different features that they involve
+(e.g. templates),
+% and decoractors \textcolor{blue}{decorators is a Python-specific feature, and it doesnt exist anywhere else}),
+and (3) the inheritance mechanisms
+that governs them,
+make the identification
+of such issues very difficult.
+
+To tackle this problem,
+we have developed {\it Pythia},
+a scheme that analyzes applications
+based on the {\it Django} framework.
+To identify potentially dangerous
+data flows that can lead to
+{\sc xss} and {\sc csrf} defects,
+Pythia takes into account all the
+aforementioned elements and employs
+ideas coming from standard
+data-flow analysis and taint tracking schemes.
+To the best of our knowledge,
+Pythia is the first mechanism
+to consider framework-specific
+elements in its analysis.
+We have evaluated our scheme
+with positive results.
+Specifically,
+we used Pythia to examine four open-source
+applications that are currently in production
+and have thousands of users
+including an e-voting service,
+and a web-based translation
+management system.
+In all cases we have identified dangerous paths
+that in turn led to vulnerabilities.
+Notably,
+in many cases the paths involved the
+particular features of Django-based
+applications e.g. templates.
+\end{abstract}
+
+\begin{CCSXML}
+<ccs2012>
+<concept>
+<concept_id>10002978.10003022.10003026</concept_id>
+<concept_desc>Security and privacy~Web application security</concept_desc>
+<concept_significance>500</concept_significance>
+</concept>
+<concept>
+<concept_id>10011007.10011074.10011099.10011102</concept_id>
+<concept_desc>Software and its engineering~Software defect analysis</concept_desc>
+<concept_significance>500</concept_significance>
+</concept>
+</ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Security and privacy~Web application security}
+\ccsdesc[500]{Software and its engineering~Software defect analysis}
+
+\keywords{Data-flow Analysis,
+Application Security, Templates,
+Unsanitized Output,
+Cross-site Scripting,
+Cross-Site Request Forgery, Django}
+
+\maketitle
+
+\input{introduction}
+% \input{background}
+\input{motivation}
+\input{approach}
+\input{evaluation}
+\input{related}
+\input{conclusion}
+
+%\input{acknowledgements}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{pythia}
+\end{document}

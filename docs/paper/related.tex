@@ -1,0 +1,128 @@
+\section{Related Work}
+\label{sec:rel}
+
+Pythia is related to
+various approaches that
+have been developed to identify web 
+application vulnerabilities
+either through {\it static data-flow
+analysis} or {\it dynamic taint tracking}.
+We describe how each one operates,
+and outline its main characteristics
+
+Livshits et al.~\cite{LL05}
+statically analyzes the {\sc cfg}
+(Control Flow Graph) of a Java application
+to identify variables
+that carry user input and check if
+they reach a sink method.
+In this way they detect
+possible {\sc sql} injection and
+{\sc xss} defects.
+{\it Pixy}~\cite{JKK06} is an open source tool that examines {\sc php} scripts
+in a similar manner.
+In Pixy,
+rules can appear in the source of the
+program in the form of annotations.
+Dahse and Holz~\cite{DH14} have introduced a
+refined type of data-flow analysis to
+identify second-order vulnerabilities.
+Note that vulnerabilities of this kind
+occur when an attack payload
+is first stored by the web application
+on the server-side and then later on used
+in a security-critical operation.
+
+Vogt et al.~\cite{VFJKKV07} have
+developed a taint tracking scheme
+which operate on the server-side at runtime.
+Their mechanism tracks sensitive
+information at the client-side
+to ensure that a script can send
+sensitive user data only to the
+site from which it came from.
+In this way they prevent {\sc xss}
+attacks that may attempt to send
+the user's cookie to a malicious site.
+Stock et al.~\cite{SLMS14} use
+taint tracking to prevent
+{\sc dom}-based {\sc xss} attacks.
+Specifically, it employs a taint-enhanced JavaScript engine that
+tracks the flow of malicious data.
+To prevent an attack,
+the scheme uses {\sc html} and JavaScript
+parsers that can identify the generation of code which in turn comes from tainted data.
+{\sc wasc}~\cite{NLC07} and
+{\sc php} {\it Aspis}~\cite{PMP11}
+apply further checks when it is
+established that tainted data have
+reached a sink.
+In particular,
+{\sc wasc} analyzes {\sc html}
+responses to examine
+if there is any data that contains malicious
+scripts to prevent {\sc xss} attacks.
+{\sc php} Aspis,
+associates tainted data with metadata
+such as the propagation path to
+prevent {\sc sql} injection and
+{\sc xss} attacks in {\sc php} applications.
+
+% To increase automation, static analyzers are used to detect coding and/or syntax errors, examine code structure and thwart security vulnerabilities. {\sc OWASP} project has published WAP - Web Application Protection Project ~\cite{owasp_wap}, which aims to detect and even correct input validation vulnerabilities for web applications written in {\sc php}, predicting false positive results. 
+
+There is a number of static analysis
+mechanisms that are used to analyze Python
+programs and applications that are
+also related to Pythia.
+Libraries such as
+{\it Pylint}~\cite{pylint},
+{\it Flake8}~\cite{py_flake},
+and {\it Django Lint} ~\cite{django_lint}
+are popular quality checkers that report
+common programming errors such as code
+smells and provide simple refactoring
+suggestions.
+Security wise,
+the most widely used
+python static analyzer is
+{\it Bandit} ~\cite{bandit},
+which is being actively maintained.
+However,
+it does not provide great insights
+when analyzing large Django projects.
+This is because it analyzes {\sc ast}s 
+searching for dangerous code
+constructs without any further analysis.
+As a result,
+it generates numerous false alarms.
+{\it Python Taint}
+({\sc pyt})~\cite{pyt} extends the
+functionality of Bandit and performs
+data-flow analysis thus providing more
+precise results.
+Nevertheless,
+{\sc pyt} does not take into account
+elements such as templates and
+mechanisms such as inheritance.
+Hence,
+it cannot address vulnerabilities
+like the ones described in
+Section~\ref{sec:motivation}.
+In addition,
+it does not resolve {\sc url}s
+to views to provide a detailed path.
+Contrary to the above techniques,
+Pythia takes into account all the
+novel features of a modern,
+Django-based application including
+templates and decorators.
+In this way it identifies vulnerabilities
+that other tools fail to do so.
+
+% Similarly Python Taint (PYT) ~\cite{pyt} is a promising static analysis tool, based on Control Flow Graph (CFG), and dataflow analysis. Although it provides adaptors for Python frameworks, it can only support analysis for Django on a superficial level, since it cannot resolve URLs to views and analyze templates, for which the runtime environment is necessary. On the contrary, as described in \ref{sec:implementation}, Pythia fosters this by design. 
+
+% Check and improve this! 
+% To summarize, this work focuses on an analyzer tailored for Django's environment, which aims to provide developers and security experts with information regarding potential sinks, leveraging on Python abstract syntax tree.  
+% The inducement towards the Django framework is that although it considered to supply developers with many security mechanisms \cite{django_sec}, there are cases where either developers do not make use of these mechanisms ~\cite{nguyensecurity}, or the framework itself has vulnerabilities ~\cite{django_cve}. 
+% Additionally, based on our research there is not a similar solution to {\it Pythia}, meaning that there is not an open-source tool targeted to Django based applications that exposes dangerous filters, in-view marked safe variables and decorator invocations.
+

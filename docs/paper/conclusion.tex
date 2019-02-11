@@ -1,0 +1,59 @@
+\section{Conclusions}
+\label{sec:conc}
+
+Modern web frameworks intent to
+assist developers by enabling
+security features by default.
+Nevertheless,
+the negligent bypassing of these
+measures can compromise 
+the security of an application.
+Furthermore,
+the complex architecture of
+{\sc mvc}-based applications
+makes it hard to identify such hazards.
+Pythia,
+aims to assist developers and
+security experts to identify
+such issues within large code bases
+and in an easy manner.
+Furthermore,
+our evaluation results indicate
+that Pythia can be used to examine
+applications in production and with
+thousands of users.
+
+Pythia is the first mechanism
+that takes into account features
+such as templates and their inheritance.
+Notably,
+the approach behind Pythia can be
+applied to different contexts
+such as the Laravel framework which
+runs on {\sc mvc}-based applications
+written in {\sc php}
+(see also Section~\ref{sec:motivation}).
+
+Future work on our mechanism
+involves the creation of visualizations
+based on the tool's output and the
+application of further checks
+when a dangerous path is identified
+in a similar to
+{\sc wasc}~\cite{NLC07} and
+{\sc php} Aspis~\cite{PMP11}
+(see Section~\ref{sec:rel}).
+
+% \subsection*{Code Availability}
+% Pythia's source code is open source and
+% can be reached through the
+% following {\sc url}:
+
+% \subsection*{Acknowledgements}
+% This work was supported by the
+% {\sc certcoop} project,
+% funded by the European Union's
+% Connecting Europe Facility Telecom Call
+% 2016 with Proposal Code
+% 2016-{\sc el}-{\sc ia}-0123
+% (Cyber Security).

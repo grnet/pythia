@@ -1,0 +1,350 @@
+\section{Evaluation}
+\label{sec:eval}
+
+We have applied Pythia on four
+different open-source,
+Django projects.
+In all cases we found vulnerabilities.
+We have reported the defects to
+the developers of each project.
+In all cases except for one patches were introduced,
+hence we name only the applications that were fixed.
+Notably,
+all applications have thousands of users.
+% due to the fact that we follow responsible 
+% disclosure practices and the issue is not yet fixed
+
+Table~\ref{tabular:apps} presents the results
+of our evaluation.
+Specifically,
+we show the number of each vulnerability
+that Pythia identified for each application,
+and provide a high-level
+description of the impacts.
+In the following,
+we provide further details
+regarding the applications and the defects we found.
+
+% As mentioned earlier, Pythia follows `potentially' dangerous filters 
+% to bypass the security mechanisms applied to sources. Sources refer to 
+% any input site, or origin of data.  Since input cannot always be marked 
+% as provided by the user, there is no unambiguous method to avoid false 
+% positive results. 
+
+% To evaluate this work, several open source solutions were considered. 
+% As expected, most well known and community supported applications did 
+% not have security vulnerabilities. Additionally, numerous projects 
+% incorporate Jinja templates ~\cite{jinja}, which are not supported by 
+% Pythia at the moment. 
+
+% \subsection{Factors}
+% This work is evaluated based on the following characteristics, namely 
+% \begin{enumerate}
+%     \item the coverage of the lists under consideration,
+% %    \item the resolution of the paths to invocations, 
+%     \item the ability to discover security vulnerabilities
+% \end{enumerate}
+
+% Regarding the lists containing targets under consideration, although 
+% this solution searches by default, for some known potentially vulnerable 
+% target functions, it is strongly recommended that the list is expanded 
+% with additional methods tailored for each application. 
+%The second characteristic applies to the successful resolution of the 
+%tainted paths to the sinks. 
+% @Linos explain resolution 
+
+\begin{center}
+\begin{table}[b]
+  \caption{Evaluation Results}
+  \vspace{-1.9mm}
+  \begin{tabular}{|p{1.8cm}| l | lp{1.6cm}|lp{1.6cm}|}
+    \hline
+     \multirow{2}{*}{\textbf{Application}} &
+        \multirow{2}{*}{\textbf{Version}} &
+        \multicolumn{2}{c|}{\textbf{XSS}} &
+        \multicolumn{2}{c|}{\textbf{CSRF}} \\ 
+        & & {\#} &  {Impacts} & {\#}  & {Impacts} \\ \hline
+        Anonymous Application & - & 3 & Privilege Escalation & 0 & - \\
+        \hline
+        Zeus & - & 1 & Privilege Escalation & 2 & Password Reset \& {\sc d}o{\sc s}  \\ \hline
+        ViMa & 2.2 & 0 & - & 9 & {\sc vm} Manipulation \\ \hline
+        Weblate & 3.3 & 1 & Privilege Escalation & 0 & - \\
+    \hline
+  \end{tabular}
+  \label{tabular:apps}
+\end{table}
+
+\end{center}
+
+% Zeus  ~\cite{zeus}, ~\cite{179224} is an electronic voting service and 
+% ViMa ~\cite{vima}  provides the educational and academic community access 
+% to shared computing and network resources that can be used for production 
+% purposes. Both are used by a plethora of user and need to provide both 
+% quality and availability of service. Additionally, two more applications 
+% which will not be named, due to the fact that we follow responsible 
+% disclosure practices and the issue is not yet fixed, were assessed. 
+% For all applications that were found vulnerable, all responsible parties 
+% were timely informed.
+
+\subsection{Anonymous Application}
+\label{sec:okeanos}
+
+We have analyzed an IaaS
+(Infrastracture as a Service)
+application with thousands of users.
+In this case,
+Pythia identified an {\sc xss} vulnerability
+very similar to the one described in
+Section~\ref{sec:motivation}.
+Specifically,
+one of the application's views
+includes a template named
+{\tt project\_application\_form.html}:
+
+\vspace{0.8mm}
+\begin{lstlisting}[language=Python, basicstyle=\footnotesize\ttfamily]
+ template_name = '/projects/project_application_form.html'
+\end{lstlisting}
+\vspace{0.8mm}
+
+\noindent
+At some point,
+the {\tt View} utilizes the template to render a form
+that incorporates data stored in the database.
+However,
+the data are initially provided by users
+through another form.
+In turn,
+the template above
+includes another one named
+{\tt form\_field.html}:
+
+\vspace{0.8mm}
+\begin{lstlisting}[language=html,basicstyle=\footnotesize\ttfamily]
+{% for field in form %}
+    {% with filter_fields=details_fields %}
+        {% include "/projects/form_field.html" %}
+    {% endwith %}
+{% endfor %}
+\end{lstlisting}
+\vspace{0.8mm}
+
+\noindent
+The sink occurs in {\tt form\_field.html}
+where every field of a form is marked as safe
+for output (line 14):
+
+\vspace{0.8mm}
+\begin{lstlisting}[language=html,basicstyle=\footnotesize\ttfamily]
+{% if field.name in filter_fields %}
+<div class="form-row"
+    {% if field.errors|length %}with-errors{% endif %}
+    {% if field.is_hidden %}with-hidden{% endif %}">
+      {{field.errors}}
+      <p class="clearfix
+         {% if field.blank %}required{% endif %}">
+         {{field.label_tag}}
+         {{field|safe}}
+         <span class="extra-img">&nbsp;</span>
+            {% if field.help_text %}
+                <span class="info">
+                    <em>more info</em>
+                    <span>{{field.help_text|safe }}</span>
+                </span>
+            {% endif %}
+         </p>
+    </div>
+{% endif %}
+\end{lstlisting}
+\vspace{0.8mm}
+
+\noindent
+The above can lead to a stored {\sc xss} attack~\cite{MLPK17},
+i.e. attackers can inject malicious scripts
+that are first stored on the database
+of the application
+and then run in the browser of other users
+(including administrators),
+thus stealing their cookies.
+
+% a template was used to render any form field marking the field itself as safe for output. This template was being included in various places. In some of them, user data were being passed as form fields, leading to Stored XSS in certain places. This vulnerability could be used to escalate privileges from user to admin. It was relatively easy to review Pythia's output and figure out which occurrences of the aforementioned vulnerable template were indeed real vulnerabilities since we only had to evaluate the data sources.
+
+\subsection{Zeus}
+\label{sec:zeus}
+
+{\it Zeus}~\cite{zeus-jets, zeus}
+is an e-voting application
+that has been in production
+since late 2012 and
+has been used in more than 500
+real-world elections involving
+more than 55,000 voters~\cite{pnrmx-del}.
+
+The {\sc xss} vulnerability
+that was discovered in Zeus is very
+similar to the one described earlier.
+An interesting observation
+was that the view that included
+the template with the sink,
+was not accessible through the
+application's
+{\sc gui} (Graphical User Interface).
+However,
+after examining the code of the application,
+attackers could reach the view through
+a specific {\sc url}.
+Hence,
+a vulnerability scanner that examines
+a running instance of the application
+would not discover the vulnerability.
+Contrary to such scanners,
+Pythia's
+ability to map {\sc url}s to views
+(as described in
+Subsection~\ref{sec:implementation})
+led to the identification of the
+dangerous path.
+
+Apart from the {\sc xss} defect,
+Pythia identified two
+to {\sc csrf} vulnerabilities:
+one that can be employed to reset
+passwords and another that
+can be a denial of service attack vector.
+
+Specifically,
+in the application version that we examined,
+the password reset functionality was
+accessed through a {\sc get} request from
+a specific {\sc url} which incorporated
+the {\sc id} (i.e. a number) of a user
+as a parameter.
+% \url{https://zeus-testing.grnet.gr/zeus/account_administration/reset_password_ confirmed/?uid=<user-id>}
+A valid attack scenario in this case,
+would be to host a website that sends
+{\sc ajax} requests to the application
+to reset every password.
+Given that the users' {\sc id}s
+are stored in a sequential way
+in the database this is easy to accomplish.
+This would cause organizational mess
+during an election since the administrator
+or anyone else would not be able to log-in.
+
+Missing {\sc csrf} protection on
+another {\sc post} form could lead to
+a Denial of Service ({\sc d}o{\sc s})
+attack through a {\sc csrf} attack.
+In particular,
+attackers could host a website,
+lure victims to it,
+and submit the form multiple times
+through the victim's browser.
+
+\subsection{ViMa}
+\label{sec:vima}
+
+{\it ViMa} (Virtual Machines)~\cite{vima},
+provides to the Greek academic community
+access to shared computing and network resources that can be used
+for production purposes.
+Currently,
+it is used by a hundreds of researchers
+and practitioners.
+
+Pythia identified numerous
+{\tt @csrf\_exempt} decorators
+that can lead to 9 types of
+{\sc csrf} attacks.
+Through these attacks a malicious
+user can perform different actions including:
+rebooting a virtual machine of another user,
+shuting it down and destroy it.
+For instance,
+the following decorator 
+allows an attacker to reboot
+a virtual machine of another user:
+
+\vspace{0.8mm}
+\begin{lstlisting}[language=Python, basicstyle=\footnotesize\ttfamily]
+@login_required
+@csrf_exempt
+@check_instance_auth
+@check_admin_lock
+def reboot(request, cluster_slug, instance):
+    cluster = get_object_or_404(Cluster, slug=cluster_slug)
+    [...]
+\end{lstlisting}
+\vspace{0.8mm}
+
+\subsection{Weblate}
+\label{sec:weblate}
+\begin{comment}
+https://github.com/WeblateOrg/weblate/blob/d84dfdbdfaba0d31588fd3bc9253e6d75d03e644/weblate/trans/views/basic.py#L91-L129
+\end{comment}
+{\it Weblate}~\cite{weblate} is a web-based
+translation management system.
+It is  used for translating many free
+software project as well as commercial ones,
+including
+{\it phpMyAdmin}~\cite{phpma} and
+{\it Debian Handbook}~\cite{dhbk}.
+
+In the case of Weblate,
+user data stored in the database
+were being marked as safe
+even before being sent to the view's corresponding template (in-view sink).
+In particular,
+the name of a project is provided by a user.
+Then,
+this information is marked as safe by
+the application and is included on
+the output. {\footnote{\url{https://github.com/WeblateOrg/weblate/blob/d84dfdbdfaba0d31588fd3bc9253e6d75d03e644/weblate/trans/views/basic.py\#L91-L129}}}
+% TODO: add code.
+% From the template's perspective,
+% Django's default behaviour of sanitizing
+% output was not deactivated.
+This issue led to stored {\sc xss} attacks
+that could be used to elevate any user's privileges to the ones of an administrator.
+% TODO: point to the corresponding patch.
+
+\subsection{False Alarms}
+\label{sc:fa}
+
+A potentially dangerous path
+may involve a source that will
+not include user data
+e.g. a variable that is instantiated
+by retrieving data from the database
+and in turn the data are auto-generated
+by the application.
+Pythia will report the path above
+producing a false positive alarm.
+An alarm like this was produced
+when we examined the
+``Anonymous Application".
+Specifically,
+the path involved the terms and
+conditions of the
+``Anonymous Application"
+which are marked as safe by
+the template when they are
+displayed to the user.
+However,
+such information is not useless.
+After seeing such an path,
+a developer can note it down and
+be careful in the future regarding the
+identified sink.
+
+In general,
+false alarms in related mechanisms
+(either data-flow analysis or
+taint tracking techniques)
+is a known issue~\cite{ME07, MLPK17}.
+Pythia though should be seen
+as an assistant for developers
+who want to have a thorough
+security perspective
+of their application,
+and not as a vulnerability detector.

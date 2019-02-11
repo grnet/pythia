@@ -3,3 +3,5 @@
 !docs/pythia.pdf
 *.egg-info/*
 /dist/
+*.swp
+docs/.DS_Store

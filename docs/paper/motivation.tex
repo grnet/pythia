@@ -1,0 +1,102 @@
+
+\section{Vulnerability Inheritance in Django-based Applications}
+\label{sec:motivation}
+
+Development frameworks enforce security mechanisms such as the 
+sanitization of {\sc html} output by default.
+In this way, certain characters
+(e.g. '{\tt <}' and '{\tt \&}')
+are not interpreted as special
+control characters.
+However,
+the frameworks also
+allow programmers to
+bypass such mechanisms to support
+specific use cases which 
+in turn, can lead to serious
+vulnerabilities including {\sc xss} and {\sc csrf}.
+
+A serious issue emerges when this bypassing
+happens in {\it templates}, 
+a feature that provides a way to generate {\sc html} dynamically.
+Templates are supported by several frameworks
+including Django and Laravel.
+In general,
+templates contain static parts of the 
+desired {\sc html} output,
+together with some special 
+syntax describing how the dynamic
+content will be inserted.
+
+When developers insert
+{\sc html} content into a template,
+they need to mark it as ``safe", 
+so that the framework itself
+treats it as such, 
+and avoid escaping {\sc html} characters.
+In this case developers have to be sure about the
+origins of the content
+because if the content 
+includes user input,
+attackers can perform an 
+{\sc xss} attack.
+
+To track such a vulnerability is not trivial
+because templates can either
+{\it include} or {\it inherit}
+other {\tt templates}.
+Hence,
+it is difficult to find which
+views are affected
+by a potentially vulnerable template.
+Figure~\ref{fig:defect},
+highlights this issue,
+i.e. a template that marks content
+as safe is included by multiple other
+ones within the application.
+In turn, 
+these templates are used by different 
+views that process content either from user 
+input, or loaded from the model. 
+
+Another issue occurs when
+developers use the 
+{\tt @csrf\_exempt} decorator to disable 
+{\sc csrf} protection in Django
+views ~\cite{csrf_exempt}.
+Specifically,
+Django allows developers to
+inject a {\sc csrf} token 
+for every form rendered and then
+expect the client 
+to supply this token with the
+corresponding {\sc post}  request.
+This mechanism is disabled when the {\tt @csrf\_exempt} 
+feature is used.
+
+To identify the aforementioned issues
+during a code review,
+security experts have to find all
+the occurrences 
+of the different features and
+track which views are affected manually.
+Such a task could even be performed
+using {\tt grep} command.
+However this would require an
+exhaustive  and repetitive search
+from the security expert's side.
+
+Additionally, 
+tracking the various intermediate entities that inherit 
+such properties is not an easy task in modern,
+large applications. 
+Thus,
+some level of automation is
+needed to cope with 
+large code-bases.
+Our approach provides a way to
+automatically discover 
+data flows when such features
+are employed and 
+warn security engineers
+about potentially vulnerable paths.
