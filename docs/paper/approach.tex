@@ -290,13 +290,12 @@ Pythia analyzes, this section provides
 a number of details regarding
 the tool's implementation and its internals.
 
-To generate the template of an {\sc ast},
-Pythia requires that Django's environment is set up.
-This is because Pythia employs Django's method
-of mapping {\sc url}s to views at run-time
-and in the context of a template,
-it can resolve either user-defined components
-(e.g. custom filters), or Django's defaults.
+As mentioned earlier, Pythia requires the {\sc ast} of a
+template. To generate the {\sc ast} of a template,
+Django requires a running environment.
+This is because Django needs to resolve
+user-defined components (e.g. custom filters)
+and its own defaults (e.g. for loops, variable aliasing).
 Other operations such as the analysis of a view's
 module are realized statically using Python's
 {\sc ast} package.

@@ -1,10 +1,13 @@
 \section{Evaluation}
 \label{sec:eval}
 
-We have applied Pythia on four
+To evaluate this work, several open source solutions were considered.
+However as Pythia requires for applications' environments
+to be set up, a large scale evaluation would be infeasible.
+We have applied Pythia on six
 different open-source,
 Django projects.
-In all cases we found vulnerabilities.
+In four cases we found vulnerabilities.
 We have reported the defects to
 the developers of each project.
 In all cases except for one patches were introduced,
@@ -240,6 +243,9 @@ attackers could host a website,
 lure victims to it,
 and submit the form multiple times
 through the victim's browser.
+The above would lead to resource drain
+due to the required computing resources
+that are needed by the attacked endpoint.
 
 \subsection{ViMa}
 \label{sec:vima}
@@ -259,9 +265,13 @@ that can lead to 9 types of
 Through these attacks a malicious
 user can perform different actions including:
 rebooting a virtual machine of another user,
-shuting it down and destroy it.
+shutting it down and destroying it. This attack
+requires that the victim is lured to browse to a malicious
+website that performs these actions using the
+victim's credentials, leveraging the lack of
+CSRF protection.
 For instance,
-the following decorator 
+the following decorator
 allows an attacker to reboot
 a virtual machine of another user:
 
@@ -308,7 +318,7 @@ This issue led to stored {\sc xss} attacks
 that could be used to elevate any user's privileges to the ones of an administrator.
 % TODO: point to the corresponding patch.
 
-\subsection{False Alarms}
+\subsection{False Positives and Negatives}
 \label{sc:fa}
 
 A potentially dangerous path
@@ -319,7 +329,7 @@ by retrieving data from the database
 and in turn the data are auto-generated
 by the application.
 Pythia will report the path above
-producing a false positive alarm.
+producing a false alarm.
 An alarm like this was produced
 when we examined the
 ``Anonymous Application".
@@ -332,13 +342,13 @@ the template when they are
 displayed to the user.
 However,
 such information is not useless.
-After seeing such an path,
+After seeing such a path,
 a developer can note it down and
 be careful in the future regarding the
 identified sink.
 
 In general,
-false alarms in related mechanisms
+false positives in related mechanisms
 (either data-flow analysis or
 taint tracking techniques)
 is a known issue~\cite{ME07, MLPK17}.
@@ -348,3 +358,11 @@ who want to have a thorough
 security perspective
 of their application,
 and not as a vulnerability detector.
+
+A false negative may appear in the following
+way: consider a {\tt mark\_safe} construct
+that exists in a function invoked by a view,
+Pythia will not report this case, because
+it does not examine the code of the invoked functions.
+However, we can perform a more in-depth analysis and
+include similar cases, 

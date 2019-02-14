@@ -3,3 +3,8 @@
 /dist/
 *.swp
 docs/.DS_Store
+**/*.aux
+**/*.log
+**/*.out
+**/*.bbl
+**/*.blg
