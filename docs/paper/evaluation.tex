@@ -1,10 +1,7 @@
 \section{Evaluation}
 \label{sec:eval}
 
-To evaluate this work, several open source solutions were considered.
-However as Pythia requires for applications' environments
-to be set up, a large scale evaluation would be infeasible.
-We have applied Pythia on six
+We have applied Pythia on five
 different open-source,
 Django projects.
 In four cases we found vulnerabilities.
@@ -14,8 +11,6 @@ In all cases except for one patches were introduced,
 hence we name only the applications that were fixed.
 Notably,
 all applications have thousands of users.
-% due to the fact that we follow responsible 
-% disclosure practices and the issue is not yet fixed
 
 Table~\ref{tabular:apps} presents the results
 of our evaluation.
@@ -27,34 +22,9 @@ description of the impacts.
 In the following,
 we provide further details
 regarding the applications and the defects we found.
-
-% As mentioned earlier, Pythia follows `potentially' dangerous filters 
-% to bypass the security mechanisms applied to sources. Sources refer to 
-% any input site, or origin of data.  Since input cannot always be marked 
-% as provided by the user, there is no unambiguous method to avoid false 
-% positive results. 
-
-% To evaluate this work, several open source solutions were considered. 
-% As expected, most well known and community supported applications did 
-% not have security vulnerabilities. Additionally, numerous projects 
-% incorporate Jinja templates ~\cite{jinja}, which are not supported by 
-% Pythia at the moment. 
-
-% \subsection{Factors}
-% This work is evaluated based on the following characteristics, namely 
-% \begin{enumerate}
-%     \item the coverage of the lists under consideration,
-% %    \item the resolution of the paths to invocations, 
-%     \item the ability to discover security vulnerabilities
-% \end{enumerate}
-
-% Regarding the lists containing targets under consideration, although 
-% this solution searches by default, for some known potentially vulnerable 
-% target functions, it is strongly recommended that the list is expanded 
-% with additional methods tailored for each application. 
-%The second characteristic applies to the successful resolution of the 
-%tainted paths to the sinks. 
-% @Linos explain resolution 
+Pythia did not report any defects for
+Misago~\cite{misago},
+a forum application written in Python.
 
 \begin{center}
 \begin{table}[b]
@@ -78,16 +48,6 @@ regarding the applications and the defects we found.
 \end{table}
 
 \end{center}
-
-% Zeus  ~\cite{zeus}, ~\cite{179224} is an electronic voting service and 
-% ViMa ~\cite{vima}  provides the educational and academic community access 
-% to shared computing and network resources that can be used for production 
-% purposes. Both are used by a plethora of user and need to provide both 
-% quality and availability of service. Additionally, two more applications 
-% which will not be named, due to the fact that we follow responsible 
-% disclosure practices and the issue is not yet fixed, were assessed. 
-% For all applications that were found vulnerable, all responsible parties 
-% were timely informed.
 
 \subsection{Anonymous Application}
 \label{sec:okeanos}
@@ -245,7 +205,7 @@ and submit the form multiple times
 through the victim's browser.
 The above would lead to resource drain
 due to the required computing resources
-that are needed by the attacked endpoint.
+needed by the attacked endpoint.
 
 \subsection{ViMa}
 \label{sec:vima}
@@ -269,7 +229,7 @@ shutting it down and destroying it. This attack
 requires that the victim is lured to browse to a malicious
 website that performs these actions using the
 victim's credentials, leveraging the lack of
-CSRF protection.
+{\sc csrf} protection.
 For instance,
 the following decorator
 allows an attacker to reboot
@@ -362,7 +322,7 @@ and not as a vulnerability detector.
 A false negative may appear in the following
 way: consider a {\tt mark\_safe} construct
 that exists in a function invoked by a view,
-Pythia will not report this case, because
+Pythia will not report this case because
 it does not examine the code of the invoked functions.
 However, we can perform a more in-depth analysis and
-include similar cases, 
+include such cases too.
