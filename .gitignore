@@ -1,5 +1,4 @@
 **/*.pyc
-!docs/pythia.pdf
 *.egg-info/*
 /dist/
 *.swp
