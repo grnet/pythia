@@ -1,9 +1,7 @@
 \section{Approach}
 \label{sec:approach}
 
-This work describes {\it Pythia},\footnote{Pythia
-will be available as open source code.
-Locations not shown for double-blind reviewing}
+This work describes {\it Pythia},
 an approach that analyzes applications,
 to identify data-paths
 which involve dangerous constructs such
@@ -22,13 +20,15 @@ examines views to identify
 the elements identified in the first step,
 \textbf{(2)} if other sinks are being used by the views.
 
+\vspace{-2mm}
+
 \begin{figure}[t]
     \begin{center}
-        \includegraphics[scale=0.53]{MVC_and_Pythia_2.pdf}
-        % \vspace{-2mm}
+        \includegraphics[scale=0.45]{MVC_and_Pythia_2.pdf}
+        \vspace{-3mm}
         \caption{In the Model Template View ({\sc mtv}) Context, {\it Pythia} focuses on {\tt Views} and {\tt Templates}.}\label{fig:arch}
     \end{center}
-    % \vspace{-3mm}
+    \vspace{-6mm}
 \end{figure}
 
 \subsection{Sinks}
@@ -95,7 +95,7 @@ In the upcoming section we discuss
 how Pythia examines the various data paths
 of an application.
 
-\begin{algorithm}[t]
+\begin{algorithm}[b]
 \caption{Searching for Dangerous Flows}
 \label{alg:explore}
 \begin{algorithmic}[1]
@@ -174,7 +174,9 @@ the results are
 being cross-examined in order to find
 unsafe data paths.
 
-\begin{algorithm}[ht]
+\vspace{-2mm}
+
+\begin{algorithm}[b]
 \caption{Exploring Paths}
 \label{alg:paths}
 \begin{algorithmic}[1]
@@ -257,11 +259,12 @@ Currently,
 Pythia does not go through form definitions
 to find template invocations.
 
+\vspace{-1.5mm}
+
 \subsection{Output Filtering}
 \label{sec:filtering}
 
-As we discussed earlier Pythia
-outputs a number of potentially
+Pythia outputs a number of potentially
 dangerous data paths.
 This means that a part of a path
 may appear in other several paths.
@@ -282,13 +285,10 @@ using a template including {\tt safe} tags
 and let the user explore their names as a
 second step.
 
+\vspace{-1.5mm}
+
 \subsection{Implementation Details}
 \label{sec:implementation}
-
-In the scope of Django applications that 
-Pythia analyzes, this section provides 
-a number of details regarding
-the tool's implementation and its internals.
 
 As we described earlier,
 Pythia requires the {\sc ast} of a template.
@@ -323,3 +323,4 @@ versions and Django 1.8.x until 1.11.x. Versions
 before 1.7.x, are not supported as they have a
 vastly different internal representation
 of the {\sc ast} node classes.
+\vspace{-1.5mm}
