@@ -36,14 +36,14 @@ a forum application written in Python.
 \begin{center}
 \begin{table}[b]
   \caption{Evaluation Results}
-  \vspace{-2mm}
+  \vspace{-3mm}
   \begin{tabular}{p{1.8cm}| l | lp{1.6cm}|lp{1.6cm}}
     \hline
      \multirow{2}{*}{\textbf{Application}} &
         \multirow{2}{*}{\textbf{Version}} &
         \multicolumn{2}{c|}{\textbf{XSS}} &
         \multicolumn{2}{c}{\textbf{CSRF}} \\ 
-        & & {\#} &  {Impacts} & {\#}  & {Impacts} \\ \hline
+        & & {\#} &  {\it Impacts} & {\#}  & {\it Impacts} \\ \hline
         $\sim$okeanos & - & 3 & Privilege Escalation & 0 & - \\
         \hline
         Zeus & - & 1 & Privilege Escalation & 2 & Password Reset \& {\sc d}o{\sc s}  \\ \hline
@@ -56,7 +56,7 @@ a forum application written in Python.
 
 \end{center}
 
-\vspace{-5mm}
+\vspace{-6mm}
 
 \subsection{$\sim$okeanos}
 \label{sec:okeanos}
@@ -195,7 +195,6 @@ accessed through a {\sc get} request from
 a specific {\sc url} which incorporated
 the {\sc id} (i.e. a number) of a user
 as a parameter.
-% \url{https://zeus-testing.grnet.gr/zeus/account_administration/reset_password_ confirmed/?uid=<user-id>}
 A valid attack scenario in this case,
 would be to host a website that sends
 {\sc ajax} requests to the application
@@ -219,6 +218,8 @@ through the victim's browser.
 The above would lead to resource drain
 due to the required computing resources
 needed by the attacked endpoint.
+
+\vspace{-1mm}
 
 \subsection{ViMa}
 \label{sec:vima}
@@ -255,10 +256,10 @@ a virtual machine of another user:
 @check_instance_auth
 @check_admin_lock
 def reboot(request, cluster_slug, instance):
-    cluster = get_object_or_404(Cluster, slug=cluster_slug)
+    cluster = get_obj_or_404(Cluster, slug=cluster_slug)
     [...]
 \end{lstlisting}
-\vspace{0.8mm}
+\vspace{-2mm}
 
 \subsection{Weblate}
 \label{sec:weblate}

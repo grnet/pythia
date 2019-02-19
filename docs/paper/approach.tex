@@ -187,14 +187,14 @@ potentially tainted paths
 \State {\bf INPUT} $origin$: template ancestry
 \Function{walk}{$TS$, $paths[]$, $node$, $origin$}
 \ForAll{$subnode \in node.nodelist$}
-    \If{$subnode.isVariable()$}
-        \If{$subnode.invokes(TS)$}
-            \State $paths[] \gets subnode, origin;$
-        \EndIf
-    \ElsIf{$subnode.isExtendsNode()$}
-        \State{$walk(TS, paths, subnode, subnode.extended\_template)$}
-    \ElsIf{$subnode.isIncludeNode()$}
-        \State{$walk(TS, paths, subnode, subnode.included\_template)$}
+  \If{$subnode.isVariable()$}
+    \If{$subnode.invokes(TS)$}
+      \State $paths[] \gets subnode, origin;$
+    \EndIf
+  \ElsIf{$subnode.isExtendsNode()$}
+    \State{$walk(TS, paths, subnode, subnode.extended\_tmplt)$}
+  \ElsIf{$subnode.isIncludeNode()$}
+    \State{$walk(TS, paths, subnode, subnode.included\_tmplt)$}
 \EndIf
 \EndFor
 \EndFunction

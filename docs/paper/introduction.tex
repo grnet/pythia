@@ -38,10 +38,10 @@ architectural pattern~\cite{GLH03, BD04}.
 In a Django-based application
 there is an object-relational mapper
 ({\sc orm}) that mediates between data models
-and a relational database ({\it model}).
+and a relational database (model).
 There is also a system for
 processing {\sc http} requests with
-a web templating system ({\it view}),
+a web templating system (view),
 and a regular-expression-based
 {\sc url} dispatcher.
 Finally,
@@ -51,17 +51,16 @@ as {\it templates} and {\it decorators}.
 
 A potential risk emerges when developers
 disable the security checks that the
-framework provides,
-especially within these features.
-In addition,
-such issues are difficult to identify because
-of inheritance mechanisms supported
+framework provides
+especially within templates and decorators.
+Such cases are difficult to identify because
+of the inheritance mechanisms supported
 by the frameworks,
-e.g. a template inherits another one with
+e.g. a template inherits another with
 disabled security checks.
 Notably,
 existing mechanisms are not designed
-to detect such dangers.
+to detect such issues.
 
 \begin{figure*}[t]
     \begin{center}
@@ -74,7 +73,7 @@ to detect such dangers.
     \vspace{-5mm}
 \end{figure*}
 
-To address this issue,
+To address such problems,
 we have developed
 {\it Pythia},\footnote{In
 ancient Greece, {\it Pythia}
@@ -84,7 +83,7 @@ who also served as the oracle.}
 a mechanism that analyzes
 Django-based applications to identify
 potentially dangerous data paths.
-In particular,
+To do so,
 it checks if dangerous code constructs
 (i.e. the ones used to bypass the security checks provided by the framework)
 are included in an application.
@@ -96,14 +95,11 @@ may incorporate user input reaches
 the constructs identified in the
 first step.
 Note that,
-Pythia searches for potentially
-dangerous data flows.
-That is,
-an alert does not necessarily involve
+a reported alert does not necessarily involve
 an existing hazard.
 However,
-such alerts can be helpful to
-the developer in the future as we
+Pythia's alerts can be helpful to
+developers in the future as we
 further explain in our ``Evaluation"
 section (\ref{sec:eval}).
 
@@ -133,7 +129,7 @@ an {\sc mvc}-based framework used to
 create applications in {\sc php}.
 
 We have evaluated Pythia by
-examining four,
+examining five,
 large,
 open-source applications
 with thousands of users including
@@ -141,9 +137,11 @@ an e-voting service~\cite{zeus-jets},
 a cloud service,
 and a web-based translation
 management system~\cite{weblate}.
-In all cases we have identified
+In four cases we have identified
 corresponding vulnerabilities and
 notified the developers.
+In all cases the applications
+were patched~\cite{weblatepatch}.
 Apart from the straightforward
 {\sc xss} vulnerabilities
 (where user input may reach a
@@ -152,11 +150,4 @@ Pythia identified many paths
 that involved the particular features of
 Django-based applications such as templates.
 
-Three of the applications were patched
-hence we provide further details about them.
-Following responsible disclosure practices,
-we do not reveal the name of
-the fourth application and we will
-do so once the issue is fixed.
-
-\vspace{-2.5mm}
+\vspace{-1mm}
