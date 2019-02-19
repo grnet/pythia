@@ -43,17 +43,29 @@
 \begin{document}
 \title{Pythia: Identifying Dangerous Data-flows in Django-based Applications}
 
-\author{Linos Giannopoulos,\textsuperscript{$\ast$}
-Eirini Degkleri,\textsuperscript{$\ast$}
-Panayiotis Tsanakas,\textsuperscript{$\dagger$}
-Dimitris Mitropoulos\textsuperscript{$\ast$}}
+\author{Linos Giannopoulos}
 \affiliation{
-  \institution{\textsuperscript{$\ast$}Greek Research and Technology Network,\\
-  \textsuperscript{$\dagger$}National Technical University of Athens}
+  \institution{Greek Research and Technology Network}
 }
-\email{{lgian, degleri, dimitro}@noc.grnet.gr,
-panag@cs.ntua.gr}
+\email{lgian@noc.grnet.gr}
 
+\author{Eirini Degkleri}
+\affiliation{
+  \institution{Greek Research and Technology Network}
+}
+\email{degleri@noc.grnet.gr}
+
+\author{Panayiotis Tsanakas}
+\affiliation{
+  \institution{National Technical University of Athens}
+}
+\email{panag@cs.ntua.gr}
+
+\author{Dimitris Mitropoulos}
+\affiliation{
+  \institution{Greek Research and Technology Network}
+}
+\email{dimitro@grnet.gr}
 
 \begin{abstract}
 Web frameworks that allow developers
@@ -95,13 +107,13 @@ elements in its analysis.
 We have evaluated our scheme
 with positive results.
 Specifically,
-we used Pythia to examine four open-source
+we used Pythia to examine five open-source
 applications that are currently in production
 and have thousands of users
 including an e-voting service,
 and a web-based translation
 management system.
-In all cases we have identified dangerous paths
+In four cases we have identified dangerous paths
 that in turn led to vulnerabilities.
 Notably,
 in many cases the paths involved the
