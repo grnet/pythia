@@ -6,9 +6,8 @@ different open-source,
 Django projects.
 In four cases we found vulnerabilities.
 We have reported the defects to
-the developers of each project.
-In all cases except for one patches were introduced,
-hence we name only the applications that were fixed.
+the developers of each project and in
+all cases patches were introduced.
 Notably,
 all applications have thousands of users.
 
@@ -37,7 +36,7 @@ a forum application written in Python.
         \multicolumn{2}{c|}{\textbf{XSS}} &
         \multicolumn{2}{c|}{\textbf{CSRF}} \\ 
         & & {\#} &  {Impacts} & {\#}  & {Impacts} \\ \hline
-        Anonymous Application & - & 3 & Privilege Escalation & 0 & - \\
+        Okeanos & - & 3 & Privilege Escalation & 0 & - \\
         \hline
         Zeus & - & 1 & Privilege Escalation & 2 & Password Reset \& {\sc d}o{\sc s}  \\ \hline
         ViMa & 2.2 & 0 & - & 9 & {\sc vm} Manipulation \\ \hline
@@ -49,7 +48,7 @@ a forum application written in Python.
 
 \end{center}
 
-\subsection{Anonymous Application}
+\subsection{Okeanos}
 \label{sec:okeanos}
 
 We have analyzed an IaaS
@@ -122,7 +121,7 @@ for output (line 14):
 \vspace{0.8mm}
 
 \noindent
-The above can lead to a stored {\sc xss} attack~\cite{MLPK17},
+The above can lead to an {\sc xss} vulnerability~\cite{MLPK17},
 i.e. attackers can inject malicious scripts
 that are first stored on the database
 of the application
@@ -291,12 +290,10 @@ by the application.
 Pythia will report the path above
 producing a false alarm.
 An alarm like this was produced
-when we examined the
-``Anonymous Application".
+when we examined ``Okeanos".
 Specifically,
 the path involved the terms and
-conditions of the
-``Anonymous Application"
+conditions of ``Okeanos"
 which are marked as safe by
 the template when they are
 displayed to the user.
