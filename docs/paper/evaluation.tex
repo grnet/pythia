@@ -4,7 +4,15 @@
 We have applied Pythia on five
 different open-source,
 Django projects.
-In four cases we found vulnerabilities.
+Note that many Django projects
+involve Jinja~\cite{jinja} templates
+and Pythia does not currently
+analyze such templates.
+Hence,
+we focused on projects that only
+employ Django templates.
+
+In four projects we found vulnerabilities.
 We have reported the defects to
 the developers of each project and in
 all cases patches were introduced.
@@ -29,14 +37,14 @@ a forum application written in Python.
 \begin{table}[b]
   \caption{Evaluation Results}
   \vspace{-1.9mm}
-  \begin{tabular}{|p{1.8cm}| l | lp{1.6cm}|lp{1.6cm}|}
+  \begin{tabular}{p{1.8cm}| l | lp{1.6cm}|lp{1.6cm}}
     \hline
      \multirow{2}{*}{\textbf{Application}} &
         \multirow{2}{*}{\textbf{Version}} &
         \multicolumn{2}{c|}{\textbf{XSS}} &
-        \multicolumn{2}{c|}{\textbf{CSRF}} \\ 
+        \multicolumn{2}{c}{\textbf{CSRF}} \\ 
         & & {\#} &  {Impacts} & {\#}  & {Impacts} \\ \hline
-        Okeanos & - & 3 & Privilege Escalation & 0 & - \\
+        $\sim$okeanos & - & 3 & Privilege Escalation & 0 & - \\
         \hline
         Zeus & - & 1 & Privilege Escalation & 2 & Password Reset \& {\sc d}o{\sc s}  \\ \hline
         ViMa & 2.2 & 0 & - & 9 & {\sc vm} Manipulation \\ \hline
@@ -48,16 +56,20 @@ a forum application written in Python.
 
 \end{center}
 
-\subsection{Okeanos}
+\subsection{$\sim$okeanos}
 \label{sec:okeanos}
 
-We have analyzed an IaaS
-(Infrastracture as a Service)
-application with thousands of users.
-In this case,
+$\sim$okeanos~\cite{okeanos} is an
+an IaaS (Infrastracture as a Service)
+that has been in production since early 2012.
+It offers cloud computing services to
+the Greek and the European research and academic community,
+and involves thousands of users.
+
+In the case of $\sim$okeanos,
 Pythia identified an {\sc xss} vulnerability
 very similar to the one described in
-Section~\ref{sec:motivation}.
+	Section~\ref{sec:motivation}.
 Specifically,
 one of the application's views
 includes a template named
@@ -221,8 +233,8 @@ Pythia identified numerous
 {\tt @csrf\_exempt} decorators
 that can lead to 9 types of
 {\sc csrf} attacks.
-Through these attacks a malicious
-user can perform different actions including:
+Through these attacks an attacker
+can perform different actions including:
 rebooting a virtual machine of another user,
 shutting it down and destroying it. This attack
 requires that the victim is lured to browse to a malicious
@@ -269,10 +281,6 @@ Then,
 this information is marked as safe by
 the application and is included on
 the output. {\footnote{\url{https://github.com/WeblateOrg/weblate/blob/d84dfdbdfaba0d31588fd3bc9253e6d75d03e644/weblate/trans/views/basic.py\#L91-L129}}}
-% TODO: add code.
-% From the template's perspective,
-% Django's default behaviour of sanitizing
-% output was not deactivated.
 This issue led to stored {\sc xss} attacks
 that could be used to elevate any user's privileges to the ones of an administrator.
 % TODO: point to the corresponding patch.
@@ -290,10 +298,10 @@ by the application.
 Pythia will report the path above
 producing a false alarm.
 An alarm like this was produced
-when we examined {\it Okeanos}.
+when we examined $\sim$okeanos.
 Specifically,
 the path involved the terms and
-conditions of {\it Okeanos}
+conditions of $\sim$okeanos.
 which are marked as safe by
 the template when they are
 displayed to the user.

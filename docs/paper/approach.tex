@@ -157,7 +157,7 @@ the other template too
 (Alg.~\ref{alg:paths}, lines 10-13).
 In this way it creates a path that
 is recorded when a sink is found.
-When a potentially dangerous path is found, the current node 
+When a dangerous path is found, the current node 
 and the template ancestry are kept in a key-value store in 
 order to be cross-examined in the second stage.
 
@@ -229,7 +229,7 @@ Pythia's output includes all views that render,
 directly or indirectly,
 a template that uses the list of
 unsafe filters and tags.
-In addition,
+Also,
 it contains the module and the line where
 the view is defined,
 the ancestry path to reach the dangerous template,

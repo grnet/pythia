@@ -8,6 +8,7 @@
 %\usepackage{draftwatermark}
 \usepackage[noend]{algpseudocode}
 %\SetWatermarkText{Preprint}
+\sloppy 
 
 \algnewcommand\And{\textbf{and}}
 \lstset{
@@ -42,32 +43,17 @@
 \begin{document}
 \title{Pythia: Identifying Dangerous Data-flows in Django-based Applications}
 
-\author{Linos Giannopoulos}
-\affiliation{%
-  \institution{Greek Research and Technology Network}
-}
-\email{lgian@noc.grnet.gr}
-
-\author{Eirini Degkleri}
-\affiliation{%
-  \institution{Greek Research and Technology Network}
-}
-\email{degleri@noc.grnet.gr}
-
-\author{Panayiotis Tsanakas}
+\author{Linos Giannopoulos,\textsuperscript{$\ast$}
+Eirini Degkleri,\textsuperscript{$\ast$}
+Panayiotis Tsanakas,\textsuperscript{$\dagger$}
+Dimitris Mitropoulos\textsuperscript{$\ast$}}
 \affiliation{
-  \institution{National Technical
-  University of Athens}
+  \institution{\textsuperscript{$\ast$}Greek Research and Technology Network,\\
+  \textsuperscript{$\dagger$}National Technical University of Athens}
 }
-\email{panag@cs.ntua.gr}
+\email{{lgian, degleri, dimitro}@noc.grnet.gr,
+panag@cs.ntua.gr}
 
-\author{Dimitris Mitropoulos}
-\affiliation{%
-  \institution{Greek Research and Technology Network}
-}
-\email{dimitro@grnet.gr}
-
-\renewcommand{\shortauthors}{L. Giannopoulos et al.}
 
 \begin{abstract}
 Web frameworks that allow developers
