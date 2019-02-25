@@ -68,8 +68,6 @@ such as the propagation path to
 prevent {\sc sql} injection and
 {\sc xss} attacks in {\sc php} applications.
 
-% To increase automation, static analyzers are used to detect coding and/or syntax errors, examine code structure and thwart security vulnerabilities. {\sc OWASP} project has published WAP - Web Application Protection Project ~\cite{owasp_wap}, which aims to detect and even correct input validation vulnerabilities for web applications written in {\sc php}, predicting false positive results. 
-
 There is a number of static analysis
 mechanisms that are used to analyze Python
 programs and applications that are
@@ -118,11 +116,3 @@ Django-based application including
 templates and decorators.
 In this way it identifies vulnerabilities
 that other tools fail to do so.
-
-% Similarly Python Taint (PYT) ~\cite{pyt} is a promising static analysis tool, based on Control Flow Graph (CFG), and dataflow analysis. Although it provides adaptors for Python frameworks, it can only support analysis for Django on a superficial level, since it cannot resolve URLs to views and analyze templates, for which the runtime environment is necessary. On the contrary, as described in \ref{sec:implementation}, Pythia fosters this by design. 
-
-% Check and improve this! 
-% To summarize, this work focuses on an analyzer tailored for Django's environment, which aims to provide developers and security experts with information regarding potential sinks, leveraging on Python abstract syntax tree.  
-% The inducement towards the Django framework is that although it considered to supply developers with many security mechanisms \cite{django_sec}, there are cases where either developers do not make use of these mechanisms ~\cite{nguyensecurity}, or the framework itself has vulnerabilities ~\cite{django_cve}. 
-% Additionally, based on our research there is not a similar solution to {\it Pythia}, meaning that there is not an open-source tool targeted to Django based applications that exposes dangerous filters, in-view marked safe variables and decorator invocations.
-
